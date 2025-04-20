@@ -1,0 +1,11 @@
+{
+	"name": "route",
+	"account_id": "290c1a3b978d0f44f83b515983a1c951",
+	"main": "./.cloudflare/worker.js",
+	"site": {
+		"bucket": "./.cloudflare/public"
+	},
+	"build": {
+		"command": "npm run build"
+	}
+}
