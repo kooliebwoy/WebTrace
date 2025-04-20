@@ -98,31 +98,73 @@
          class:mx-auto={!finalUrl || isLoading}
          class:md:ml-0={finalUrl && !isLoading}
          in:fade={{duration: 300}}>
-      <div class="card-body p-8">
-        <h2 class="card-title text-2xl mb-4">Redirect Checker</h2>
+      
+      <!-- Card Header -->
+      <div class="bg-primary text-primary-content p-5">
+        <h2 class="text-2xl font-bold flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+          </svg>
+          Redirect Checker
+        </h2>
+        <p class="text-sm opacity-80 mt-1">Track the redirection path of any domain</p>
+      </div>
+      
+      <!-- Card Body -->
+      <div class="card-body p-6">
         <form method="post" action="?/redirectCheck" class="flex flex-col gap-4" use:enhance={handleSubmit}>
-          <input 
-            type="text" 
-            class="input input-bordered w-full" 
-            name="url" 
-            bind:value={url} 
-            placeholder="Enter a domain or URL (e.g. example.com)" 
-            required 
-            minlength="4"
-            disabled={isLoading} 
-          />
-          <button class="btn btn-primary" type="submit" disabled={isLoading}>
+          <div class="form-control">
+            <label class="label pb-1">
+              <span class="label-text font-medium">Domain or URL</span>
+            </label>
+            <div class="relative">
+              <input 
+                type="text" 
+                class="input input-bordered w-full pr-12 font-mono text-sm" 
+                name="url" 
+                bind:value={url} 
+                placeholder="example.com" 
+                required 
+                minlength="4"
+                disabled={isLoading} 
+              />
+              {#if url}
+                <button 
+                  type="button" 
+                  class="absolute right-2 top-1/2 -translate-y-1/2 btn btn-ghost btn-xs btn-circle" 
+                  onclick={() => url = ''}
+                  aria-label="Clear input">
+                  ✕
+                </button>
+              {/if}
+            </div>
+            <label class="label pt-0">
+              <span class="label-text-alt">No need to add https:// - we'll handle that</span>
+            </label>
+          </div>
+          
+          <button 
+            class="btn btn-primary w-full mt-2 relative overflow-hidden" 
+            type="submit" 
+            disabled={isLoading}
+          >
             {#if isLoading}
-              <span class="loading loading-spinner"></span>
-              Checking...
+              <div class="absolute inset-0 flex items-center justify-center bg-primary">
+                <span class="loading loading-dots"></span>
+              </div>
+              <span class="opacity-0">Check Redirects</span>
             {:else}
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+              </svg>
               Check Redirects
             {/if}
           </button>
           
           {#if errorMessage}
-            <div class="alert alert-error mt-2" transition:slide>
-              {errorMessage}
+            <div class="alert alert-error mt-2 shadow-md" transition:slide>
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 stroke-current shrink-0" fill="none" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+              <span>{errorMessage}</span>
             </div>
           {/if}
         </form>
