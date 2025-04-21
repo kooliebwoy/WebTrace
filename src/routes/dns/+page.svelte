@@ -2,10 +2,11 @@
   import { enhance } from '$app/forms';
   import type { PageProps } from './$types';
   import type { ActionResult, SubmitFunction } from '@sveltejs/kit';
-  import { Server, Layers, Info, XCircle } from '@lucide/svelte';
+  import { Server, Layers, Info, XCircle, ArrowLeft } from '@lucide/svelte';
   import { fly, fade, slide } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   import { browser } from '$app/environment';
+  import { goto } from '$app/navigation';
 
   // Props derived from server (may not update reliably if types are broken)
   let { form }: PageProps = $props(); 
@@ -254,6 +255,16 @@
               Lookup DNS
             {/if}
           </button>
+          
+          <div class="mt-2">
+            <button 
+              type="button" 
+              class="btn btn-ghost btn-xs w-full flex justify-center items-center gap-2" 
+              onclick={() => goto('/')}
+            >
+              <ArrowLeft class="w-3 h-3" /> Back to tools
+            </button>
+          </div>
           
           {#if errorMessage}
             <div class="alert alert-error mt-2 shadow-md" transition:slide>

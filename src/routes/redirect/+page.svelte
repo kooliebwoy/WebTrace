@@ -1,9 +1,8 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import type { PageProps } from './$types';
-  import type { ActionResult, SubmitFunction } from '@sveltejs/kit';
-  import { ExternalLink, ArrowDown, XCircle, CheckCircle, Repeat2 } from '@lucide/svelte';
-  import { fly, fade, slide } from 'svelte/transition';
+  import { fade, fly, slide } from 'svelte/transition';
+  import { Repeat2, ExternalLink, ArrowDown, XCircle, CheckCircle, Info, ArrowLeft } from '@lucide/svelte';
+  import { goto } from '$app/navigation';
   import { quintOut } from 'svelte/easing';
   import { browser } from '$app/environment';
 
@@ -120,8 +119,8 @@
       class:gap-6={finalUrl && !isLoading}
       class:lg:gap-10={finalUrl && !isLoading}>
     
-    <!-- Input Card - Fixed dimensions with mobile responsiveness -->
-    <div class="card w-[min(350px,95vw)] h-[316px] bg-base-100 shadow-xl overflow-hidden transition-all duration-500"
+    <!-- Input Card - Adaptive dimensions with mobile responsiveness -->
+    <div class="card w-[min(350px,95vw)] bg-base-100 shadow-xl transition-all duration-500"
          class:self-start={finalUrl && !isLoading && !isMobile}
          class:self-center={!finalUrl || isLoading || isMobile}
          class:justify-self-center={finalUrl && !isLoading}
@@ -188,6 +187,16 @@
               Check Redirects
             {/if}
           </button>
+          
+          <div class="mt-2">
+            <button 
+              type="button" 
+              class="btn btn-ghost btn-xs w-full flex justify-center items-center gap-2" 
+              onclick={() => goto('/')}
+            >
+              <ArrowLeft class="w-3 h-3" /> Back to tools
+            </button>
+          </div>
           
           {#if errorMessage}
             <div class="alert alert-error mt-2 shadow-md" transition:slide>

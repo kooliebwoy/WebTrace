@@ -9,7 +9,8 @@
       name: 'Redirect Checker',
       description: 'Track the redirection path of any domain or URL',
       icon: Repeat2,
-      color: 'bg-primary-soft text-primary-content',
+      color: 'bg-primary-soft',
+      textColor: 'text-primary',
       route: '/redirect',
       available: true
     },
@@ -17,7 +18,8 @@
       name: 'DNS Lookup',
       description: 'Check DNS records for any domain',
       icon: Server,
-      color: 'bg-secondary-soft text-secondary-content',
+      color: 'bg-secondary-soft',
+      textColor: 'text-secondary',
       route: '/dns',
       available: true
     },
@@ -25,33 +27,37 @@
       name: 'SSL Certificate',
       description: 'Verify and inspect SSL certificates',
       icon: Lock,
-      color: 'bg-accent-soft text-accent-content',
+      color: 'bg-success-soft',
+      textColor: 'text-success',
       route: '/ssl',
-      available: false
+      available: true
     },
     {
       name: 'WHOIS Lookup',
       description: 'Lookup domain registration details',
       icon: Database,
-      color: 'bg-info-soft text-info-content',
+      color: 'bg-info-soft',
+      textColor: 'text-info',
       route: '/whois',
-      available: false
+      available: true
     },
     {
       name: 'HTTP Headers',
       description: 'Analyze HTTP response headers',
       icon: Globe,
-      color: 'bg-success-soft text-success-content',
+      color: 'bg-success-soft',
+      textColor: 'text-success',
       route: '/headers',
-      available: false
+      available: true
     },
     {
       name: 'SPF Validator',
       description: 'Validate SPF records for email domains',
       icon: Mail,
-      color: 'bg-warning-soft text-warning-content',
+      color: 'bg-warning-soft',
+      textColor: 'text-warning',
       route: '/spf',
-      available: false
+      available: true
     }
   ];
 </script>
@@ -64,6 +70,7 @@
       <p class="text-lg opacity-80">A collection of network and web tools</p>
     </div>
     
+    
     <!-- Tools Grid -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 w-full">
       {#each availableTools as tool, i}
@@ -73,11 +80,11 @@
         >
           <!-- Card Header -->
           <div class="{tool.color} p-5">
-            <h2 class="text-2xl font-bold flex items-center gap-2">
+            <h2 class="text-2xl font-bold flex items-center gap-2 {tool.textColor}">
               <svelte:component this={tool.icon} class="h-6 w-6" />
               {tool.name}
             </h2>
-            <p class="text-sm opacity-80 mt-1">{tool.description}</p>
+            <p class="text-sm opacity-80 mt-1 text-base-content">{tool.description}</p>
           </div>
           
           <!-- Card Body -->
@@ -85,7 +92,7 @@
             {#if tool.available}
               <a 
                 href={tool.route} 
-                class="btn w-full btn-outline {tool.color.split('-soft')[0].replace('bg-', 'btn-')}"
+                class="btn w-full btn-outline {tool.textColor.replace('text-', 'btn-')}"
               >
                 <span>Open Tool</span>
                 <ArrowRight class="h-4 w-4 ml-1" />
