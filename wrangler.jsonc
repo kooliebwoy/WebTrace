@@ -8,5 +8,14 @@
 	"build": {
 		"command": "npm run build"
 	},
-	"compatibility_date": "2025-04-20"
+	"compatibility_date": "2025-04-20",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"routes": [
+		{
+			"pattern": "route.motorfeen.com",
+			"custom_domain": true
+		}
+	]
 }
