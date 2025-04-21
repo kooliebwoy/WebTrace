@@ -14,7 +14,7 @@
 	],
 	"routes": [
 		{
-			"pattern": "route.motorfeen.com",
+			"pattern": "routekit.motorfeen.com",
 			"custom_domain": true
 		}
 	]

@@ -81,18 +81,19 @@
 </script>
 
 <svelte:head>
-  <title>SPF Validator | Route</title>
+  <title>SPF Validator | RouteKit</title>
 </svelte:head>
 
 <div class="min-h-screen flex items-center justify-center px-4 py-6 bg-base-200">
   <!-- Main content container with adaptive layout -->
-  <div class="w-full max-w-6xl" 
+  <div class="w-full max-w-[1400px]" 
        class:flex={!spfData && !isLoading}
        class:items-center={!spfData && !isLoading}
        class:justify-center={!spfData || isLoading}
        class:grid={spfData && !isLoading}
        class:grid-cols-1={spfData && !isLoading}
        class:lg:grid-cols-2={spfData && !isLoading}
+       class:lg:grid-cols-[minmax(350px,1fr)_minmax(500px,2fr)]={spfData && !isLoading}
        class:gap-6={spfData && !isLoading}
        class:lg:gap-10={spfData && !isLoading}>
     

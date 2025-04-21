@@ -103,7 +103,7 @@
 
 <div class="min-h-screen bg-base-200 flex flex-col items-center justify-center p-4 sm:p-6">
   <!-- Container with conditional classes for different layouts -->
-  <div class="w-full max-w-[95%] 2xl:max-w-[90%] transition-all duration-500"
+  <div class="w-full max-w-[1400px] transition-all duration-500"
       class:flex={!finalUrl || isLoading}
       class:flex-col={!finalUrl || isLoading}
       class:items-center={!finalUrl || isLoading}
@@ -111,10 +111,10 @@
       class:grid={finalUrl && !isLoading}
       class:grid-cols-1={finalUrl && !isLoading}
       class:md:grid-cols-2={finalUrl && !isLoading && !showDetailsPanel}
-      class:md:grid-cols-[auto_1fr]={finalUrl && !isLoading && !showDetailsPanel}
+      class:md:grid-cols-[minmax(350px,1fr)_minmax(400px,2fr)]={finalUrl && !isLoading && !showDetailsPanel}
       class:md:grid-cols-1={finalUrl && !isLoading && showDetailsPanel}
       class:lg:grid-cols-3={finalUrl && !isLoading && showDetailsPanel}
-      class:lg:grid-cols-[auto_1fr_auto]={finalUrl && !isLoading && showDetailsPanel}
+      class:lg:grid-cols-[minmax(320px,1fr)_minmax(400px,2fr)_minmax(350px,1fr)]={finalUrl && !isLoading && showDetailsPanel}
       class:justify-items-center={finalUrl && !isLoading}
       class:gap-6={finalUrl && !isLoading}
       class:lg:gap-10={finalUrl && !isLoading}>

@@ -69,7 +69,7 @@
 
 <div class="min-h-screen bg-base-200 flex flex-col items-center justify-center p-4 sm:p-6">
   <!-- Container with conditional classes for different layouts -->
-  <div class="w-full max-w-[95%] 2xl:max-w-[90%] transition-all duration-500"
+  <div class="w-full max-w-[1400px] transition-all duration-500"
       class:flex={!whoisData || isLoading}
       class:flex-col={!whoisData || isLoading}
       class:items-center={!whoisData || isLoading}
@@ -77,6 +77,7 @@
       class:grid={whoisData && !isLoading}
       class:grid-cols-1={whoisData && !isLoading}
       class:lg:grid-cols-2={whoisData && !isLoading}
+      class:lg:grid-cols-[minmax(350px,1fr)_minmax(500px,2fr)]={whoisData && !isLoading}
       class:gap-6={whoisData && !isLoading}
       class:lg:gap-10={whoisData && !isLoading}>
     

@@ -2,6 +2,7 @@
   import { ArrowRight, Server, Repeat2, Lock, Database, Globe, Mail } from '@lucide/svelte';
   import { fade, fly } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
+  
 
   // Array of available tools
   const availableTools = [
@@ -62,11 +63,15 @@
   ];
 </script>
 
+<svelte:head>
+  <title>RouteKit - Network Diagnostic Toolkit</title>
+</svelte:head>
+
 <div class="min-h-screen bg-base-200 flex flex-col items-center p-4 sm:p-6">
   <div class="w-full max-w-[1200px] transition-all duration-500">
     <!-- Header -->
     <div class="text-center mb-12" in:fade={{duration: 400}}>
-      <h1 class="text-4xl font-bold mb-2">Route</h1>
+      <h1 class="text-4xl font-bold mb-2">RouteKit</h1>
       <p class="text-lg opacity-80">A collection of network and web tools</p>
     </div>
     

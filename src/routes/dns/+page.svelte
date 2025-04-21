@@ -117,7 +117,7 @@
 
 <div class="min-h-screen bg-base-200 flex flex-col items-center justify-center p-4 sm:p-6">
   <!-- Container with conditional classes for different layouts -->
-  <div class="w-full max-w-[95%] 2xl:max-w-[90%] transition-all duration-500"
+  <div class="w-full max-w-[1400px] transition-all duration-500"
       class:flex={!dnsRecords.length || isLoading}
       class:flex-col={!dnsRecords.length || isLoading}
       class:items-center={!dnsRecords.length || isLoading}
@@ -125,10 +125,10 @@
       class:grid={dnsRecords.length && !isLoading}
       class:grid-cols-1={dnsRecords.length && !isLoading}
       class:md:grid-cols-2={dnsRecords.length && !isLoading && !showDetailsPanel}
-      class:md:grid-cols-[auto_1fr]={dnsRecords.length && !isLoading && !showDetailsPanel}
+      class:md:grid-cols-[minmax(350px,1fr)_minmax(400px,2fr)]={dnsRecords.length && !isLoading && !showDetailsPanel}
       class:md:grid-cols-1={dnsRecords.length && !isLoading && showDetailsPanel}
       class:lg:grid-cols-3={dnsRecords.length && !isLoading && showDetailsPanel}
-      class:lg:grid-cols-[auto_1fr_auto]={dnsRecords.length && !isLoading && showDetailsPanel}
+      class:lg:grid-cols-[minmax(320px,1fr)_minmax(400px,2fr)_minmax(350px,1fr)]={dnsRecords.length && !isLoading && showDetailsPanel}
       class:justify-items-center={dnsRecords.length && !isLoading}
       class:gap-6={dnsRecords.length && !isLoading}
       class:lg:gap-10={dnsRecords.length && !isLoading}>

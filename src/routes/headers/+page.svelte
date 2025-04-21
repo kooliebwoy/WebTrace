@@ -51,7 +51,7 @@
 
 <div class="min-h-screen bg-base-200 flex flex-col items-center justify-center p-4 sm:p-6">
   <!-- Container with conditional classes for different layouts -->
-  <div class="w-full max-w-[95%] 2xl:max-w-[90%] transition-all duration-500"
+  <div class="w-full max-w-[1400px] transition-all duration-500"
       class:flex={!headersData || isLoading}
       class:flex-col={!headersData || isLoading}
       class:items-center={!headersData || isLoading}
@@ -59,6 +59,7 @@
       class:grid={headersData && !isLoading}
       class:grid-cols-1={headersData && !isLoading}
       class:lg:grid-cols-2={headersData && !isLoading}
+      class:lg:grid-cols-[minmax(350px,1fr)_minmax(500px,2fr)]={headersData && !isLoading}
       class:gap-6={headersData && !isLoading}
       class:lg:gap-10={headersData && !isLoading}>
     
