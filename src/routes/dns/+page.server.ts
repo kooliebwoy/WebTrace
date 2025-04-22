@@ -5,8 +5,9 @@ export const actions: Actions = {
   dnsLookup: async ({ request }) => {
     console.log('[Server Action] dnsLookup started.');
     
-    // Dynamically import dns module at runtime
-    const dns = await import('node:dns');
+    // Use string-based dynamic imports to prevent build-time detection
+    // @ts-ignore
+    const dns = await import(/* @vite-ignore */ 'node:dns');
 
     const formData = await request.formData();
     const domain = formData.get('domain');

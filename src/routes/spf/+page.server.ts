@@ -62,8 +62,9 @@ export const actions = {
 
 // Function to check SPF records for a domain
 async function checkSPFRecords(domain: string): Promise<SPFResult> {
-  // Dynamically import DNS module at runtime
-  const dns = await import('node:dns');
+  // Use string-based dynamic imports to prevent build-time detection
+  // @ts-ignore
+  const dns = await import(/* @vite-ignore */ 'node:dns');
   const resolveTxt = promisify(dns.resolveTxt);
   
   const result: SPFResult = {

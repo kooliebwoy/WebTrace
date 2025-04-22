@@ -88,9 +88,11 @@ export const actions = {
 
 // Helper function to get SSL certificate
 async function getCertificate(domain: string, port: number): Promise<Certificate> {
-  // Dynamically import the modules at runtime
-  const { connect } = await import('node:tls');
-  const net = await import('node:net');
+  // Use string-based dynamic imports to prevent build-time detection
+  // @ts-ignore
+  const tls = await import(/* @vite-ignore */ 'node:tls');
+  // @ts-ignore
+  const net = await import(/* @vite-ignore */ 'node:net');
   
   return new Promise((resolve, reject) => {
     let isClosed = false;
@@ -106,8 +108,8 @@ async function getCertificate(domain: string, port: number): Promise<Certificate
     }, 10000);
     
     try {
-      // Using connect from node:tls directly as per Cloudflare's example
-      tlsSocket = connect({
+      // Using tls.connect with the dynamically imported module
+      tlsSocket = tls.connect({
         host: domain,
         port: port,
         servername: domain,
