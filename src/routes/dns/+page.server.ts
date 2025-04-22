@@ -1,6 +1,6 @@
 import type { Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import dns from 'node:dns/promises';
+import dns from 'node:dns';
 
 export const actions: Actions = {
   dnsLookup: async ({ request }) => {
@@ -62,7 +62,7 @@ export const actions: Actions = {
       // Look up A records (IPv4)
       if (requestedTypes.length === 0 || requestedTypes.includes('A')) {
         await safeDnsLookup(
-          () => dns.resolve4(cleanedDomain, { ttl: true }),
+          () => dns.promises.resolve4(cleanedDomain, { ttl: true }),
           'A',
           (record: { address: string; ttl: number }) => record.address
         );
@@ -71,7 +71,7 @@ export const actions: Actions = {
       // Look up AAAA records (IPv6)
       if (requestedTypes.length === 0 || requestedTypes.includes('AAAA')) {
         await safeDnsLookup(
-          () => dns.resolve6(cleanedDomain, { ttl: true }),
+          () => dns.promises.resolve6(cleanedDomain, { ttl: true }),
           'AAAA',
           (record: { address: string; ttl: number }) => record.address
         );
@@ -80,7 +80,7 @@ export const actions: Actions = {
       // Look up MX records
       if (requestedTypes.length === 0 || requestedTypes.includes('MX')) {
         await safeDnsLookup(
-          () => dns.resolveMx(cleanedDomain),
+          () => dns.promises.resolveMx(cleanedDomain),
           'MX',
           (record: { exchange: string; priority: number }) => record.exchange
         );
@@ -89,7 +89,7 @@ export const actions: Actions = {
       // Look up TXT records - always fetch as they may contain SPF
       if (requestedTypes.length === 0 || requestedTypes.includes('TXT') || requestedTypes.includes('SPF')) {
         await safeDnsLookup(
-          () => dns.resolveTxt(cleanedDomain),
+          () => dns.promises.resolveTxt(cleanedDomain),
           'TXT',
           (record: string[]) => record.join(' ')
         );
@@ -98,7 +98,7 @@ export const actions: Actions = {
       // Look up NS records
       if (requestedTypes.length === 0 || requestedTypes.includes('NS')) {
         await safeDnsLookup(
-          () => dns.resolveNs(cleanedDomain),
+          () => dns.promises.resolveNs(cleanedDomain),
           'NS'
         );
       }
@@ -106,7 +106,7 @@ export const actions: Actions = {
       // Look up CNAME records
       if (requestedTypes.length === 0 || requestedTypes.includes('CNAME')) {
         await safeDnsLookup(
-          () => dns.resolveCname(cleanedDomain),
+          () => dns.promises.resolveCname(cleanedDomain),
           'CNAME'
         );
       }
@@ -114,7 +114,7 @@ export const actions: Actions = {
       // Look up SOA records
       if (requestedTypes.length === 0 || requestedTypes.includes('SOA')) {
         await safeDnsLookup(
-          () => dns.resolveSoa(cleanedDomain),
+          () => dns.promises.resolveSoa(cleanedDomain),
           'SOA',
           (record: {
             nsname: string;
@@ -131,7 +131,7 @@ export const actions: Actions = {
       // Look up CAA records (Certificate Authority Authorization)
       if (requestedTypes.length === 0 || requestedTypes.includes('CAA')) {
         await safeDnsLookup(
-          () => dns.resolveCaa(cleanedDomain),
+          () => dns.promises.resolveCaa(cleanedDomain),
           'CAA',
           (record: { critical: boolean; tag: string; value: string }) => 
             `${record.tag}: ${record.value}${record.critical ? ' (critical)' : ''}`
@@ -155,7 +155,7 @@ export const actions: Actions = {
       // Check for DMARC record - specific TXT record at _dmarc subdomain
       if (requestedTypes.length === 0 || requestedTypes.includes('DMARC')) {
         await safeDnsLookup(
-          () => dns.resolveTxt(`_dmarc.${cleanedDomain}`),
+          () => dns.promises.resolveTxt(`_dmarc.${cleanedDomain}`),
           'DMARC',
           (record: string[]) => record.join(' ')
         );

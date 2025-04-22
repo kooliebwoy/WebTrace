@@ -30,6 +30,7 @@
 	},
 	"dependencies": {
 		"@lucide/svelte": "^0.501.0",
-		"whois": "^2.14.2"
+		"whois": "^2.14.2",
+		"wrangler": "^4.12.0"
 	}
 }
