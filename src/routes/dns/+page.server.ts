@@ -1,10 +1,12 @@
 import type { Actions } from './$types';
 import { fail } from '@sveltejs/kit';
-import dns from 'node:dns';
 
 export const actions: Actions = {
   dnsLookup: async ({ request }) => {
     console.log('[Server Action] dnsLookup started.');
+    
+    // Dynamically import dns module at runtime
+    const dns = await import('node:dns');
 
     const formData = await request.formData();
     const domain = formData.get('domain');

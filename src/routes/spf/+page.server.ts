@@ -1,6 +1,5 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import * as dns from 'dns';
 import { promisify } from 'util';
 
 // SPF Validation Result Interface
@@ -25,9 +24,6 @@ interface ParsedSPFRecord {
   category: 'ip' | 'domain' | 'mechanism' | 'modifier' | 'unknown';
   isValid: boolean;
 }
-
-// DNS lookup promise functions
-const resolveTxt = promisify(dns.resolveTxt);
 
 export const actions = {
   spfCheck: async ({ request, fetch }) => {
@@ -66,6 +62,10 @@ export const actions = {
 
 // Function to check SPF records for a domain
 async function checkSPFRecords(domain: string): Promise<SPFResult> {
+  // Dynamically import DNS module at runtime
+  const dns = await import('node:dns');
+  const resolveTxt = promisify(dns.resolveTxt);
+  
   const result: SPFResult = {
     domain,
     records: {

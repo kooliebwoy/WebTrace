@@ -1,7 +1,5 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { connect } from 'node:tls';
-import net from 'node:net';
 
 // Define the SSL certificate result structure
 interface Certificate {
@@ -90,8 +88,13 @@ export const actions = {
 
 // Helper function to get SSL certificate
 async function getCertificate(domain: string, port: number): Promise<Certificate> {
+  // Dynamically import the modules at runtime
+  const { connect } = await import('node:tls');
+  const net = await import('node:net');
+  
   return new Promise((resolve, reject) => {
     let isClosed = false;
+    let tlsSocket: any;
     
     // Set connection timeout - 10 seconds
     const timeout = setTimeout(() => {
@@ -102,42 +105,47 @@ async function getCertificate(domain: string, port: number): Promise<Certificate
       }
     }, 10000);
     
-    // Using connect from node:tls directly as per Cloudflare's example
-    const tlsSocket = connect({
-      host: domain,
-      port: port,
-      servername: domain,
-      rejectUnauthorized: false  // Allow self-signed certificates
-    }, () => {
-      clearTimeout(timeout);
+    try {
+      // Using connect from node:tls directly as per Cloudflare's example
+      tlsSocket = connect({
+        host: domain,
+        port: port,
+        servername: domain,
+        rejectUnauthorized: false  // Allow self-signed certificates
+      }, () => {
+        clearTimeout(timeout);
+        
+        const cert = tlsSocket.getPeerCertificate(true);
+        tlsSocket.end();
+        
+        if (Object.keys(cert).length > 0) {
+          resolve(cert as unknown as Certificate);
+        } else {
+          reject(new Error('No certificate information available'));
+        }
+      });
       
-      const cert = tlsSocket.getPeerCertificate(true);
-      tlsSocket.end();
+      tlsSocket.on('error', (err) => {
+        clearTimeout(timeout);
+        if (!isClosed) {
+          isClosed = true;
+          reject(err);
+        }
+      });
       
-      if (Object.keys(cert).length > 0) {
-        resolve(cert as unknown as Certificate);
-      } else {
-        reject(new Error('No certificate information available'));
-      }
-    });
-    
-    tlsSocket.on('error', (err) => {
+      // Set a reasonable timeout for the socket
+      tlsSocket.setTimeout(10000);
+      tlsSocket.on('timeout', () => {
+        if (!isClosed) {
+          isClosed = true;
+          tlsSocket.destroy();
+          reject(new Error(`Connection to ${domain}:${port} timed out`));
+        }
+      });
+    } catch (error) {
       clearTimeout(timeout);
-      if (!isClosed) {
-        isClosed = true;
-        reject(err);
-      }
-    });
-    
-    // Set a reasonable timeout for the socket
-    tlsSocket.setTimeout(10000);
-    tlsSocket.on('timeout', () => {
-      if (!isClosed) {
-        isClosed = true;
-        tlsSocket.destroy();
-        reject(new Error(`Connection to ${domain}:${port} timed out`));
-      }
-    });
+      reject(error);
+    }
   });
 }
 
