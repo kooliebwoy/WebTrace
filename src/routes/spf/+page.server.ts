@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
 import { promisify } from 'util';
+import { getDnsModule } from '$lib/server/node-compat';
 
 // SPF Validation Result Interface
 interface SPFResult {
@@ -62,9 +63,8 @@ export const actions = {
 
 // Function to check SPF records for a domain
 async function checkSPFRecords(domain: string): Promise<SPFResult> {
-  // Use string-based dynamic imports to prevent build-time detection
-  // @ts-ignore
-  const dns = await import(/* @vite-ignore */ 'node:dns');
+  // Get DNS module safely using our compatibility helper
+  const dns = await getDnsModule();
   const resolveTxt = promisify(dns.resolveTxt);
   
   const result: SPFResult = {

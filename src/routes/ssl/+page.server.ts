@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
+import { getTlsModule, getNetModule } from '$lib/server/node-compat';
 
 // Define the SSL certificate result structure
 interface Certificate {
@@ -88,11 +89,9 @@ export const actions = {
 
 // Helper function to get SSL certificate
 async function getCertificate(domain: string, port: number): Promise<Certificate> {
-  // Use string-based dynamic imports to prevent build-time detection
-  // @ts-ignore
-  const tls = await import(/* @vite-ignore */ 'node:tls');
-  // @ts-ignore
-  const net = await import(/* @vite-ignore */ 'node:net');
+  // Get modules safely using our compatibility helper
+  const tls = await getTlsModule();
+  const net = await getNetModule();
   
   return new Promise((resolve, reject) => {
     let isClosed = false;

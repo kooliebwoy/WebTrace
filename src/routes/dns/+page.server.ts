@@ -1,13 +1,13 @@
 import type { Actions } from './$types';
 import { fail } from '@sveltejs/kit';
+import { getDnsModule } from '$lib/server/node-compat';
 
 export const actions: Actions = {
   dnsLookup: async ({ request }) => {
     console.log('[Server Action] dnsLookup started.');
     
-    // Use string-based dynamic imports to prevent build-time detection
-    // @ts-ignore
-    const dns = await import(/* @vite-ignore */ 'node:dns');
+    // Get DNS module safely using our compatibility helper
+    const dns = await getDnsModule();
 
     const formData = await request.formData();
     const domain = formData.get('domain');
