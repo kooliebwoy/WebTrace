@@ -1,5 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
+import { getTimers } from '$lib/server/node-compat';
 
 export const actions = {
   headersCheck: async ({ request, fetch }) => {
@@ -19,21 +20,78 @@ export const actions = {
       }
       
       try {
-        // Timeout after 10 seconds
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000);
+        // Get timers with compatible implementation
+        const { setTimeout, clearTimeout } = await getTimers();
         
-        // Make the request
-        const response = await fetch(url, {
-          method: 'HEAD',
+        // Implement manual timeout mechanism
+        let isTimedOut = false;
+        const controller = new AbortController();
+        
+        // Create a timeout promise with even shorter timeout
+        const timeoutPromise = new Promise((_, reject) => {
+          const timeoutId = setTimeout(() => {
+            isTimedOut = true;
+            controller.abort();
+            reject(new Error('Request timed out after 5 seconds'));
+          }, 5000); // Even shorter timeout for Cloudflare Workers
+          
+          // Store the timeout ID on the promise for cleanup
+          (timeoutPromise as any).timeoutId = timeoutId;
+        });
+        
+        // Create the fetch promise with more optimization
+        const fetchPromise = fetch(url, {
+          method: 'HEAD', // Try HEAD first
           headers: {
-            'User-Agent': 'Route-Network-Tools/1.0',
+            'User-Agent': 'RouteKit-Network-Tools/1.0',
+            'Accept': '*/*',
+            'Connection': 'close', // Close connection after request
+            'Cache-Control': 'no-cache' // Bypass caches
           },
           redirect: 'manual', // Don't follow redirects automatically
           signal: controller.signal
+        }).catch(error => {
+          // If HEAD request fails, try GET as fallback with limited response
+          if (!isTimedOut) {
+            console.log('HEAD request failed, trying GET as fallback');
+            return fetch(url, {
+              method: 'GET',
+              headers: {
+                'User-Agent': 'RouteKit-Network-Tools/1.0',
+                'Accept': '*/*',
+                'Connection': 'close', // Close connection after request
+                'Cache-Control': 'no-cache' // Bypass caches
+              },
+              redirect: 'manual',
+              signal: controller.signal
+            });
+          }
+          throw error;
         });
         
-        clearTimeout(timeoutId);
+        // Race the fetch against the timeout with additional error recovery
+        let response: Response;
+        try {
+          response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
+          
+          // Clear the timeout if the fetch won the race
+          if ((timeoutPromise as any).timeoutId) {
+            clearTimeout((timeoutPromise as any).timeoutId);
+          }
+          
+          // Verify response is valid
+          if (!response || !response.headers) {
+            throw new Error('Invalid response received');
+          }
+        } catch (error) {
+          // Additional error logging and recovery
+          console.error(`Headers check failed for ${url}:`, error);
+          return fail(500, { 
+            error: error.name === 'AbortError' 
+              ? 'Request timed out - the server took too long to respond'
+              : `Request failed: ${error.message || 'Unknown error'}` 
+          });
+        }
         
         // Get all headers
         const headers: Record<string, string> = {};

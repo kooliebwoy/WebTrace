@@ -16,6 +16,7 @@
   let isLoading = $state(false);
   let dnsRecords = $state<Array<{type: string; data: string; ttl?: number; priority?: number;}>>([]);
   let errorMessage = $state('');
+  let infoMessages = $state<string[]>([]);
   let selectedRecordTypes = $state<string[]>([]);
   let showAdvancedOptions = $state(false);
   
@@ -73,9 +74,11 @@
       
       if (result.type === 'success' && result.data) {
         dnsRecords = result.data.records ?? [];
+        infoMessages = result.data.messages ?? [];
         errorMessage = '';
       } else if (result.type === 'failure' && result.data) {
         errorMessage = result.data.error ?? 'An unknown error occurred.';
+        infoMessages = [];
         dnsRecords = [];
       }
     };
@@ -281,7 +284,7 @@
            transition:fade={{duration: 300, delay: 300}}>
         
         <!-- Records Header -->
-        <h3 class="text-xl font-bold mb-4 mt-2" in:fly={{y: 20, delay: 400, duration: 300}}>
+        <h3 class="text-xl font-bold mb-2 mt-2" in:fly={{y: 20, delay: 400, duration: 300}}>
           <div class="flex items-center gap-2">
             <Layers class="h-5 w-5" />
             DNS Records
@@ -290,6 +293,18 @@
             Domain: <span class="font-mono">{domain}</span>
           </div>
         </h3>
+        
+        <!-- Informational Messages -->
+        {#if infoMessages.length > 0}
+          <div class="alert alert-info mb-4 shadow-md" in:slide={{duration: 300, delay: 450}} out:slide>
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <div class="flex flex-col gap-1">
+              {#each infoMessages as message}
+                <span>{message}</span>
+              {/each}
+            </div>
+          </div>
+        {/if}
         
         <!-- Records by type -->
         <div class="space-y-6">

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowRight, Server, Repeat2, Lock, Database, Globe, Mail } from '@lucide/svelte';
+  import { ArrowRight, Server, Repeat2, Lock, Database, Globe, Mail, Globe2 } from '@lucide/svelte';
   import { fade, fly } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   
@@ -59,7 +59,16 @@
       textColor: 'text-warning',
       route: '/spf',
       available: true
-    }
+    },
+    // {
+    //   name: 'DNS Propagation',
+    //   description: 'Check DNS record propagation across global servers',
+    //   icon: Globe2,
+    //   color: 'bg-accent-soft',
+    //   textColor: 'text-accent',
+    //   route: '/propagation',
+    //   available: false // Hide temporarily until fixed
+    // }
   ];
 </script>
 

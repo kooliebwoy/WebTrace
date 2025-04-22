@@ -66,3 +66,23 @@ export async function getNetModule() {
     return netShim;
   }
 }
+
+/**
+ * Safely get Timers functions, with fallbacks
+ */
+export async function getTimers() {
+  try {
+    const timers = await import('node:timers');
+    return {
+      setTimeout: timers.setTimeout,
+      clearTimeout: timers.clearTimeout
+    };
+  } catch (e) {
+    console.log('Using timers fallback for build');
+    // Use global setTimeout/clearTimeout as fallback
+    return {
+      setTimeout: globalThis.setTimeout || ((...args) => args[2]),
+      clearTimeout: globalThis.clearTimeout || (() => {})
+    };
+  }
+}

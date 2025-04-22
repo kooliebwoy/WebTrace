@@ -1,11 +1,9 @@
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
-import { createCloudflareCompatPlugin } from './cloudflare-worker-compat';
 
 export default defineConfig({
 	plugins: [
-		createCloudflareCompatPlugin(),
 		tailwindcss(), 
 		sveltekit()
 	],
