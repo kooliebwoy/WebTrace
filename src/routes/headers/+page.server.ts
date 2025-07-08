@@ -28,15 +28,13 @@ export const actions = {
         const controller = new AbortController();
         
         // Create a timeout promise with even shorter timeout
+        let timeoutId: any;
         const timeoutPromise = new Promise((_, reject) => {
-          const timeoutId = setTimeout(() => {
+          timeoutId = setTimeout(() => {
             isTimedOut = true;
             controller.abort();
             reject(new Error('Request timed out after 5 seconds'));
           }, 5000); // Even shorter timeout for Cloudflare Workers
-          
-          // Store the timeout ID on the promise for cleanup
-          (timeoutPromise as any).timeoutId = timeoutId;
         });
         
         // Create the fetch promise with more optimization
@@ -75,8 +73,8 @@ export const actions = {
           response = await Promise.race([fetchPromise, timeoutPromise]) as Response;
           
           // Clear the timeout if the fetch won the race
-          if ((timeoutPromise as any).timeoutId) {
-            clearTimeout((timeoutPromise as any).timeoutId);
+          if (timeoutId) {
+            clearTimeout(timeoutId);
           }
           
           // Verify response is valid
