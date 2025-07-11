@@ -105,3 +105,67 @@ export async function readLogFiles(ssh: NodeSSH, logFiles: string[]) {
     logFiles: processedFiles
   };
 }
+
+export type LogEntry = {
+  hostname: string;
+  ip: string;
+  timestamp: Date;
+  method: string;
+  path: string;
+  protocol: string;
+  status: number;
+  statusType: 'success' | 'redirect' | 'error';
+  size: number;
+  referrer: string;
+  userAgent: string;
+  rawLog: string;
+  sourceFile: string;
+  id: string;
+};
+
+// Parses raw log content into an array of structured log entries
+export function parseLogEntries(logContent: string): LogEntry[] {
+  const entries: LogEntry[] = [];
+  const logLines = logContent.split('\n').filter(line => line.trim().length > 0);
+  let currentFile = '';
+  let idCounter = 0;
+
+  const logRegex = /^(?<hostname>\S+)\s+(?<ip>[\da-fA-F:.]+)\s+\[(?<timestamp>.+?)\]\s+(?<method>\S+)\s+"(?<path>.*?)"\s+(?<protocol>HTTP\/[\d.]+)\s+(?<status>\d{3})\s+"(?<referrer>.*?)"\s+"(?<userAgent>.*?)".*?\s+(?<size>\d+)/;
+
+  for (const line of logLines) {
+    const fileHeaderMatch = line.match(/^--- From (.+) ---$/);
+    if (fileHeaderMatch) {
+      currentFile = fileHeaderMatch[1].split('/').pop() || '';
+      continue;
+    }
+
+    const match = line.match(logRegex);
+
+    if (match && match.groups) {
+      const groups = match.groups;
+      const status = parseInt(groups.status, 10);
+      let statusType: 'success' | 'redirect' | 'error' = 'success';
+      if (status >= 500) statusType = 'error';
+      else if (status >= 400) statusType = 'error';
+      else if (status >= 300) statusType = 'redirect';
+
+      entries.push({
+        hostname: groups.hostname,
+        ip: groups.ip,
+        timestamp: new Date(groups.timestamp.replace(':', ' ')),
+        method: groups.method,
+        path: groups.path,
+        protocol: groups.protocol,
+        status: status,
+        statusType: statusType,
+        size: parseInt(groups.size, 10),
+        referrer: groups.referrer,
+        userAgent: groups.userAgent,
+        rawLog: line,
+        sourceFile: currentFile,
+        id: `log-${idCounter++}`
+      });
+    }
+  }
+  return entries;
+}

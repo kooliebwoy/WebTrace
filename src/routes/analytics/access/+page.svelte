@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { formatBytes } from '$lib/utils';
+	import LogChart from '$lib/components/LogChart.svelte';
+	import AnalyticsWorker from '$lib/workers/analytics.worker?worker';
 	import { LucideLoader, LucideLock, LucideServer, LucideTerminal, LucideUser, LucideGlobe, LucideFile, LucideArchive, LucideCalendar, LucideRefreshCw, LucideArrowRight, LucideInfo, LucideKey, LucideAlertCircle } from '@lucide/svelte';
 	import type { ActionData } from './$types';
 
@@ -10,61 +12,59 @@
 	let showPrivateKey = $state(false);
 	let usePrivateKey = $state(false);
 	let selectedLogFiles = $state<string[]>([]);
+	let searchQuery = $state('');
+	let selectedMethods = $state<string[]>([]);
+	let selectedStatusTypes = $state<string[]>([]);
 
-	function parseLogEntry(logContent: string) {
-		const entries = [];
-		const logLines = logContent.split('\n').filter(line => line.trim().length > 0);
-		let currentFile = '';
+	let statusDistributionData = $state(null);
+	let topIpsData = $state(null);
 
-		// Regex for the specific Kinsta log format provided by the user.
-		const logRegex = /^(?<hostname>\S+)\s+(?<ip>[\da-fA-F:.]+)\s+\[(?<timestamp>.+?)\]\s+(?<method>\S+)\s+"(?<path>.*?)"\s+(?<protocol>HTTP\/[\d.]+)\s+(?<status>\d{3})\s+"(?<referrer>.*?)"\s+"(?<userAgent>.*?)".*?\s+(?<size>\d+)/;
+	const allLogs = $derived(form?.success && form.entries ? JSON.parse(form.entries, (key, value) => {
+		if (key === 'timestamp') return new Date(value);
+		return value;
+	}) : []);
 
-		for (const line of logLines) {
-			const fileHeaderMatch = line.match(/^--- From (.+) ---$/);
-			if (fileHeaderMatch) {
-				currentFile = fileHeaderMatch[1].split('/').pop() || '';
-				continue;
-			}
-
-			const match = line.match(logRegex);
-
-			if (match && match.groups) {
-				const groups = match.groups;
-				const status = parseInt(groups.status, 10);
-				let statusType: 'success' | 'redirect' | 'error' = 'success';
-				if (status >= 500) statusType = 'error';
-				else if (status >= 400) statusType = 'error';
-				else if (status >= 300) statusType = 'redirect';
-
-				entries.push({
-					hostname: groups.hostname,
-					ip: groups.ip,
-					timestamp: new Date(groups.timestamp.replace(':', ' ')),
-					method: groups.method,
-					path: groups.path,
-					protocol: groups.protocol,
-					status: status,
-					statusType: statusType,
-					size: formatBytes(parseInt(groups.size, 10)),
-					referrer: groups.referrer,
-					userAgent: groups.userAgent,
-					rawLog: line,
-					sourceFile: currentFile,
-					id: crypto.randomUUID()
-				});
-			}
-		}
-		return entries;
-	}
-	
 	const availableLogFiles = $derived(form?.logFiles || []);
-	const allLogEntries = $derived(form?.logContent ? parseLogEntry(form.logContent) : []);
 
-	const filteredLogEntries = $derived(allLogEntries.filter(entry => 
-		selectedLogFiles.length === 0 || 
-		(entry.sourceFile && selectedLogFiles.includes(entry.sourceFile))
-	));
-	
+	const availableMethods = $derived([...new Set(allLogs.map(e => e.method))]);
+	const availableStatusTypes = ['success', 'redirect', 'error'];
+
+	const filteredLogEntries = $derived(allLogs.filter(entry => {
+		const fileMatch = selectedLogFiles.length === 0 || (entry.sourceFile && selectedLogFiles.includes(entry.sourceFile));
+		const methodMatch = selectedMethods.length === 0 || selectedMethods.includes(entry.method);
+		const statusMatch = selectedStatusTypes.length === 0 || selectedStatusTypes.includes(entry.statusType);
+
+		const query = searchQuery.toLowerCase();
+		const searchMatch = query === '' ||
+			entry.path.toLowerCase().includes(query) ||
+			entry.ip.toLowerCase().includes(query) ||
+			entry.referrer.toLowerCase().includes(query) ||
+			entry.userAgent.toLowerCase().includes(query);
+
+		return fileMatch && methodMatch && statusMatch && searchMatch;
+	}));
+
+	$effect(() => {
+		if (filteredLogEntries.length > 0) {
+			const worker = new AnalyticsWorker();
+
+			worker.onmessage = (event) => {
+				statusDistributionData = event.data.statusDistributionData;
+				topIpsData = event.data.topIpsData;
+				worker.terminate();
+			};
+
+			worker.postMessage(filteredLogEntries);
+
+			return () => {
+				worker.terminate();
+			};
+		} else {
+			statusDistributionData = null;
+			topIpsData = null;
+		}
+	});
+
 	function toggleLogFileSelection(fileName: string) {
 		const index = selectedLogFiles.indexOf(fileName);
 		if (index > -1) {
@@ -73,14 +73,34 @@
 			selectedLogFiles.push(fileName);
 		}
 	}
-	
+
 	function selectAllLogFiles() {
 		selectedLogFiles = availableLogFiles.map(file => file.name);
 	}
-	
+
 	function deselectAllLogFiles() {
 		selectedLogFiles = [];
 	}
+
+	function toggleArrayItem<T>(arr: T[], item: T) {
+		const newArr = [...arr];
+		const index = newArr.indexOf(item);
+		if (index > -1) {
+			newArr.splice(index, 1);
+		} else {
+			newArr.push(item);
+		}
+		return newArr;
+	}
+
+	function toggleMethodSelection(method: string) {
+		selectedMethods = toggleArrayItem(selectedMethods, method);
+	}
+
+	function toggleStatusSelection(status: string) {
+		selectedStatusTypes = toggleArrayItem(selectedStatusTypes, status);
+	}
+
 </script>
 
 <svelte:head>
@@ -236,19 +256,85 @@
 			</div>
 		</div>
 		
-		<!-- Log Content Display -->
-		<div class="card bg-base-100 shadow-md">
-			<div class="card-body">
-				<h2 class="card-title">
+		<!-- Charts -->
+		<div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+			<div class="bg-base-100 rounded-box shadow p-4 h-96">
+				{#if statusDistributionData}
+					<LogChart type="pie" data={JSON.parse(JSON.stringify(statusDistributionData))} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, title: { display: true, text: 'Status Code Distribution' } } }} />
+				{:else}
+					<div class="skeleton w-full h-full"></div>
+				{/if}
+			</div>
+			<div class="bg-base-100 rounded-box shadow p-4 h-96">
+				{#if topIpsData}
+					<LogChart type="bar" data={JSON.parse(JSON.stringify(topIpsData))} options={{ responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, title: { display: true, text: 'Top 10 IP Addresses' } } }} />
+				{:else}
+					<div class="skeleton w-full h-full"></div>
+				{/if}
+			</div>
+		</div>
+
+		<!-- Log Entries Table -->
+		<div class="mt-6 bg-base-100 rounded-box shadow">
+			<div class="overflow-x-auto">
+				<h2 class="card-title p-4 pb-0">
 					<LucideTerminal class="w-5 h-5" />
 					Access Logs
 				</h2>
-				
+
 				{#if isLoading}
 					<div class="p-4 flex items-center justify-center h-[70vh]">
 						<LucideLoader class="w-8 h-8 animate-spin" />
 					</div>
 				{:else if form?.success}
+					<!-- Filters & Search -->
+					<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4 p-4 bg-base-200 rounded-lg items-end">
+						<div class="form-control lg:col-span-2">
+							<label for="search" class="label">
+								<span class="label-text">Search</span>
+							</label>
+							<input 
+								type="text" 
+								id="search" 
+								placeholder="Search by path, IP, referrer, etc." 
+								class="input input-bordered w-full"
+								bind:value={searchQuery}
+							/>
+						</div>
+
+						<div class="form-control">
+							<div class="label">
+								<span class="label-text">Method</span>
+							</div>
+							<div class="flex flex-wrap gap-2">
+								{#each availableMethods as method}
+									<button 
+										class="btn btn-sm {selectedMethods.includes(method) ? 'btn-primary' : 'btn-outline'}"
+										onclick={() => toggleMethodSelection(method)}
+									>
+										{method}
+									</button>
+								{/each}
+							</div>
+						</div>
+
+						<div class="form-control">
+							<div class="label">
+								<span class="label-text">Status</span>
+							</div>
+							<div class="flex flex-wrap gap-2">
+								{#each availableStatusTypes as status}
+									<button 
+										class="btn btn-sm capitalize {selectedStatusTypes.includes(status) ? '' : 'btn-outline'} {status === 'success' ? 'btn-success' : status === 'redirect' ? 'btn-warning' : 'btn-error'}"
+										onclick={() => toggleStatusSelection(status)}
+									>
+										{status}
+									</button>
+								{/each}
+							</div>
+						</div>
+					</div>
+
 					<!-- File selection UI if multiple log files exist -->
 					{#if availableLogFiles.length > 0}
 						<div class="mb-4">
@@ -317,7 +403,7 @@
 												<td>{entry.method}</td>
 												<td class="break-all">{entry.path}</td>
 												<td>{entry.ip}</td>
-												<td>{entry.size}</td>
+												<td>{formatBytes(entry.size)}</td>
 											</tr>
 											<!-- Expandable details row -->
 											<tr class="font-mono text-xs">

@@ -31,6 +31,7 @@
 	"dependencies": {
 		"@auth/sveltekit": "^1.10.0",
 		"@lucide/svelte": "^0.501.0",
+		"chart.js": "^4.5.0",
 		"node-ssh": "^13.2.1",
 		"whois": "^2.14.2",
 		"wrangler": "^4.12.0"

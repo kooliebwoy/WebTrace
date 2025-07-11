@@ -1,6 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { connectSSH, findLogFiles, readLogFiles } from '../utils';
+import { connectSSH, findLogFiles, readLogFiles, parseLogEntries } from '../utils';
 
 export const actions = {
   default: async ({ request }) => {
@@ -17,14 +17,13 @@ export const actions = {
         // Read log content from found files
         const { logContent, logFiles } = await readLogFiles(ssh, accessLogFiles);
         
-        // Disconnect from the server
-        ssh.dispose();
+        // Parse logs
+        const entries = parseLogEntries(logContent);
 
-        console.log(logContent)
-        
         return {
           success: true,
-          logContent,
+          // Stringify entries to avoid serialization issues with Date objects
+          entries: JSON.stringify(entries),
           logFiles
         };
       } catch (error) {
