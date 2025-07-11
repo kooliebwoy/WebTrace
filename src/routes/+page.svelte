@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { ArrowRight, Server, Repeat2, Lock, Database, Globe, Mail, Globe2 } from '@lucide/svelte';
+  import { ArrowRight, Server, Repeat2, Lock, Database, Globe, Mail, Globe2, FileText } from '@lucide/svelte';
   import { fade, fly } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
+  // import { SignIn } from "@auth/sveltekit/components"
   
 
   // Array of available tools
@@ -60,6 +61,15 @@
       route: '/spf',
       available: true
     },
+    {
+      name: 'Log Analytics',
+      description: 'Access and analyze server logs via SSH',
+      icon: FileText,
+      color: 'bg-accent-soft',
+      textColor: 'text-accent',
+      route: '/analytics',
+      available: true
+    },
     // {
     //   name: 'DNS Propagation',
     //   description: 'Check DNS record propagation across global servers',
@@ -78,6 +88,7 @@
 
 <div class="min-h-screen bg-base-200 flex flex-col items-center p-4 sm:p-6">
   <div class="w-full max-w-[1200px] transition-all duration-500">
+    <!-- <SignIn provider="resend" /> -->
     <!-- Header -->
     <div class="text-center mb-12" in:fade={{duration: 400}}>
       <h1 class="text-4xl font-bold mb-2">RouteKit</h1>
