@@ -3,6 +3,7 @@
 
 import { sequence } from "@sveltejs/kit/hooks";
 import { handle as authHandle } from '$lib/server/auth';
+import { redirect, type Handle, error } from '@sveltejs/kit';
 
 // /** @type {import('@sveltejs/kit').Handle} */
 // export async function handleRequest({ event, resolve }) {
@@ -17,3 +18,21 @@ import { handle as authHandle } from '$lib/server/auth';
 export const dnsShim = {};
 export const tlsShim = { connect: () => {} };
 export const netShim = {};
+
+// lets check our service binding
+// const getService = async ({ event, resolve }) => {
+//     const service = event.platform.env.SERVICE;
+//     if (!service) {
+//         throw new Error('Service binding not found');
+//     }
+//     const data = await service.getClientDO('randomIdstring');
+//     console.log(data);
+
+//     return resolve(event)
+// }
+
+
+
+// export const handle: Handle = sequence (
+//     getService
+// );

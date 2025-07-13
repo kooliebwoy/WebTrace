@@ -17,5 +17,11 @@
 			"pattern": "routekit.motorfeen.com",
 			"custom_domain": true
 		}
+	],
+	"services": [
+		{
+			"binding": "SERVICE",
+			"service": "platformbuddy"
+		}
 	]
 }
