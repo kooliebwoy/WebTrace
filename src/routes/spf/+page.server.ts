@@ -1,7 +1,8 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { promisify } from 'util';
 import { getDnsModule } from '$lib/server/node-compat';
+import { promisify } from 'util';
+import { normalizeTxtRecord } from '$lib/server/txt-normalization';
 
 // SPF Validation Result Interface
 interface SPFResult {
@@ -87,7 +88,7 @@ async function checkSPFRecords(domain: string): Promise<SPFResult> {
     
     // Filter for SPF records
     const spfRecords = txtRecords.filter(record => {
-      const recordStr = record.join('');
+      const recordStr = normalizeTxtRecord(record);
       return recordStr.toLowerCase().startsWith('v=spf1');
     });
 
@@ -103,10 +104,10 @@ async function checkSPFRecords(domain: string): Promise<SPFResult> {
     }
 
     // Store raw records
-    result.records.raw = spfRecords.map(rec => rec.join(''));
+    result.records.raw = spfRecords.map(rec => normalizeTxtRecord(rec));
     
     // Parse the first SPF record (the standard says only one should be processed)
-    const mainRecord = spfRecords[0].join('');
+    const mainRecord = normalizeTxtRecord(spfRecords[0]);
     result.records.parsed = parseSPFRecord(mainRecord);
     
     // Check for syntax errors

@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite';
 import { sveltekit } from '@sveltejs/kit/vite';
 import { defineConfig } from 'vite';
+/// <reference types="vitest" />
 
 export default defineConfig({
 	plugins: [
@@ -19,5 +20,12 @@ export default defineConfig({
 	define: {
 		// Force Vite to treat these modules as external at build time
 		'import.meta.CLOUDFLARE_WORKER': 'true'
+	},
+	test: {
+		environment: 'node',
+		globals: true,
+		setupFiles: ['./src/test/setup.ts'],
+		include: ['src/**/*.{test,spec}.{js,ts}'],
+		testTimeout: 10000 // 10 seconds for timeout tests
 	}
 });

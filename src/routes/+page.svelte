@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowRight, Server, Repeat2, Lock, Database, Globe, Mail, Globe2, FileText } from '@lucide/svelte';
+  import { ArrowRight, Server, Repeat2, Lock, Database, Globe, Mail, GlobeIcon } from '@lucide/svelte';
   import { fade, fly } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   // import { SignIn } from "@auth/sveltekit/components"
@@ -61,24 +61,24 @@
       route: '/spf',
       available: true
     },
-    {
-      name: 'Log Analytics',
-      description: 'Access and analyze server logs via SSH',
-      icon: FileText,
-      color: 'bg-accent-soft',
-      textColor: 'text-accent',
-      route: '/analytics',
-      available: true
-    },
     // {
-    //   name: 'DNS Propagation',
-    //   description: 'Check DNS record propagation across global servers',
-    //   icon: Globe2,
+    //   name: 'Log Analytics',
+    //   description: 'Access and analyze server logs via SSH',
+    //   icon: FileText,
     //   color: 'bg-accent-soft',
     //   textColor: 'text-accent',
-    //   route: '/propagation',
-    //   available: false // Hide temporarily until fixed
-    // }
+    //   route: '/analytics',
+    //   available: true
+    // },
+    {
+      name: 'DNS Propagation',
+      description: 'Check DNS record propagation across global servers',
+      icon: GlobeIcon,
+      color: 'bg-accent-soft',
+      textColor: 'text-accent',
+      route: '/propagation',
+      available: true
+    }
   ];
 </script>
 
@@ -132,4 +132,9 @@
       {/each}
     </div>
   </div>
+  <!-- Footer -->
+  <footer class="w-full max-w-[1200px] mx-auto mt-10 flex flex-col items-center justify-center gap-2 text-sm opacity-80">
+    <a href="https://kayde.io" class="link" target="_blank" rel="noopener noreferrer">Developed by Kayde</a>
+    <img src="/kayde-logo.png" alt="Kayde logo" class="h-6 w-auto" />
+  </footer>
 </div>

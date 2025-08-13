@@ -1,17 +1,16 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { getDnsModule } from '$lib/server/node-compat';
-import { getTimers } from '$lib/server/node-compat';
-import { promisify } from 'util';
+import { dohQuery } from '$lib/server/doh';
+import { normalizeTxtRecord } from '$lib/server/txt-normalization';
 
-// Define global DNS servers for propagation checking - only use the most reliable ones
-const DNS_SERVERS = [
-  { name: 'Google', ip: '8.8.8.8', location: 'Global', provider: 'Google' },
-  { name: 'Cloudflare', ip: '1.1.1.1', location: 'Global', provider: 'Cloudflare' },
-  { name: 'Quad9', ip: '9.9.9.9', location: 'Global', provider: 'Quad9' },
-  { name: 'OpenDNS', ip: '208.67.222.222', location: 'Global', provider: 'Cisco' },
-  { name: 'Level3', ip: '4.2.2.2', location: 'US', provider: 'CenturyLink' },
-  { name: 'Verisign', ip: '64.6.64.6', location: 'US', provider: 'Verisign' }
+// Define DoH servers for propagation checking - only tested working endpoints
+const DOH_SERVERS = [
+  { name: 'Google', url: 'https://dns.google/resolve', location: 'Global', provider: 'Google' },
+  { name: 'Cloudflare', url: 'https://cloudflare-dns.com/dns-query', location: 'Global', provider: 'Cloudflare' },
+  { name: 'Cloudflare (Mozilla)', url: 'https://mozilla.cloudflare-dns.com/dns-query', location: 'Global', provider: 'Cloudflare' },
+  { name: 'NextDNS', url: 'https://dns.nextdns.io/dns-query', location: 'Global', provider: 'NextDNS' },
+  { name: 'AliDNS', url: 'https://dns.alidns.com/resolve', location: 'Asia', provider: 'Alibaba' },
+  { name: 'DNS.SB', url: 'https://doh.sb/dns-query', location: 'Global', provider: 'DNS.SB' }
 ];
 
 interface DNSRecord {
@@ -23,7 +22,7 @@ interface DNSRecord {
 interface DNSPropagationResult {
   server: {
     name: string;
-    ip: string;
+    url: string;
     location: string;
     provider: string;
   };
@@ -36,61 +35,39 @@ interface DNSPropagationResult {
 export const actions = {
   // Simple single-stage DNS propagation check
   checkPropagation: async ({ request }) => {
+    console.log('[Propagation] Starting checkPropagation action');
     try {
       const data = await request.formData();
       const domain = data.get('domain')?.toString()?.trim() || '';
       const recordType = data.get('recordType')?.toString()?.trim().toUpperCase() || 'A';
       
       if (!domain) {
+        console.log('[Propagation] No domain provided');
         return fail(400, { error: 'Domain name is required' });
       }
       
-      console.log(`[Server Action] Checking DNS propagation for ${domain}, record type: ${recordType}`);
+      console.log(`[Propagation] Checking DNS propagation for ${domain}, record type: ${recordType}`);
       
-      // Create individual queries with strict timeouts
-      const queryPromises = DNS_SERVERS.map(async server => {
-        // Wrap each DNS query in a timeout
+      // Query servers one by one like DNS lookup does, not simultaneously
+      const results: DNSPropagationResult[] = [];
+      
+      for (const server of DOH_SERVERS) {
+        console.log(`[Propagation] Querying ${server.name}...`);
         try {
-          // Set a very short 2-second timeout for each query
-          const { setTimeout } = await getTimers();
-          
-          // Create a promise that will resolve to null after the timeout
-          const timeoutPromise = new Promise<null>(resolve => {
-            setTimeout(() => resolve(null), 2000);
-          });
-          
-          // Race the actual query against the timeout
-          const result = await Promise.race([
-            querySingleServer(domain, recordType, server),
-            timeoutPromise
-          ]);
-          
-          // If we got a null result, the timeout won
-          if (result === null) {
-            return {
-              server,
-              records: [],
-              propagated: false,
-              responseTime: 2000,
-              error: 'Query timed out after 2 seconds'
-            };
-          }
-          
-          return result;
+          const result = await querySingleServer(domain, recordType, server);
+          results.push(result);
+          console.log(`[Propagation] ${server.name} completed: ${result.propagated ? 'success' : 'failed'}`);
         } catch (error) {
-          // Fallback for any errors
-          return {
+          console.error(`[Propagation] ${server.name} error:`, error);
+          results.push({
             server,
             records: [],
             propagated: false,
             responseTime: 0,
-            error: error.message || 'Query failed'
-          };
+            error: error.message
+          });
         }
-      });
-      
-      // Wait for all queries to complete (with timeouts)
-      const results = await Promise.all(queryPromises);
+      }
       
       // Calculate propagation percentage
       const propagatedCount = results.filter(r => r.propagated).length;
@@ -99,6 +76,8 @@ export const actions = {
       
       // Check if records are consistent
       const isConsistent = checkConsistency(results);
+      
+      console.log(`[Propagation] Returning results: ${propagatedCount}/${results.length} propagated (${propagationPercentage}%)`);
       
       return {
         domain,
@@ -118,7 +97,7 @@ export const actions = {
 // Query multiple DNS servers in parallel but with timeout protection
 async function queryMultipleServers(domain: string, recordType: string): Promise<DNSPropagationResult[]> {
   // Create a timeout promise for each server (3 seconds max per server)
-  const queryPromises = DNS_SERVERS.map(server => {
+  const queryPromises = DOH_SERVERS.map(server => {
     // Create a timeout protection for each query
     return Promise.race([
       querySingleServer(domain, recordType, server),
@@ -147,7 +126,7 @@ async function queryMultipleServers(domain: string, recordType: string): Promise
     } else {
       // Handle rejected promises
       return {
-        server: DNS_SERVERS[index],
+        server: DOH_SERVERS[index],
         records: [],
         propagated: false,
         responseTime: 0,
@@ -161,7 +140,7 @@ async function queryMultipleServers(domain: string, recordType: string): Promise
 async function querySingleServerWithTimeout(
   domain: string, 
   recordType: string, 
-  server: { name: string; ip: string; location: string; provider: string },
+  server: { name: string; url: string; location: string; provider: string },
   timeoutMs: number = 3000
 ): Promise<DNSPropagationResult> {
   return Promise.race([
@@ -180,68 +159,23 @@ async function querySingleServerWithTimeout(
   ]);
 }
 
-// Query a single DNS server for records
+// Query a single DNS server for records using DoH
 async function querySingleServer(
   domain: string, 
   recordType: string, 
-  server: { name: string; ip: string; location: string; provider: string }
+  server: { name: string; url: string; location: string; provider: string }
 ): Promise<DNSPropagationResult> {
   const startTime = Date.now();
   
   try {
-    // Get DNS module with our compatibility layer
-    const dns = await getDnsModule();
-    
-    // Set DNS server resolver
-    const resolver = new dns.promises.Resolver();
-    resolver.setServers([server.ip]);
-    
-    // Query the appropriate record type
-    let records: DNSRecord[] = [];
-    
-    switch (recordType) {
-      case 'A':
-        const aRecords = await resolver.resolve4(domain);
-        records = aRecords.map(r => ({ type: 'A', value: r }));
-        break;
-      case 'AAAA':
-        const aaaaRecords = await resolver.resolve6(domain);
-        records = aaaaRecords.map(r => ({ type: 'AAAA', value: r }));
-        break;
-      case 'MX':
-        const mxRecords = await resolver.resolveMx(domain);
-        records = mxRecords.map(r => ({ 
-          type: 'MX', 
-          value: `${r.priority} ${r.exchange}`,
-          ttl: r.ttl
-        }));
-        break;
-      case 'TXT':
-        const txtRecords = await resolver.resolveTxt(domain);
-        records = txtRecords.map(r => ({ 
-          type: 'TXT', 
-          value: Array.isArray(r) ? r.join('') : r
-        }));
-        break;
-      case 'NS':
-        const nsRecords = await resolver.resolveNs(domain);
-        records = nsRecords.map(r => ({ type: 'NS', value: r }));
-        break;
-      case 'CNAME':
-        const cnameRecords = await resolver.resolveCname(domain);
-        records = cnameRecords.map(r => ({ type: 'CNAME', value: r }));
-        break;
-      default:
-        throw new Error(`Unsupported record type: ${recordType}`);
-    }
-    
-    const responseTime = Date.now() - startTime;
+    // Use DoH query with 2 second timeout
+    const result = await dohQuery(server.url, domain, recordType, 2000);
     
     return {
       server,
-      records,
-      propagated: records.length > 0,
-      responseTime
+      records: result.records,
+      propagated: result.records.length > 0,
+      responseTime: result.elapsed
     };
   } catch (error: any) {
     const responseTime = Date.now() - startTime;
@@ -276,8 +210,22 @@ function checkConsistency(results: DNSPropagationResult[]): boolean {
     }
     
     // Check if all values match (ignoring order)
-    const resultValues = result.records.map(r => r.value).sort();
-    const referenceValues = referenceRecords.map(r => r.value).sort();
+    // For TXT records, normalize values according to RFC 1035 before comparison
+    const resultValues = result.records.map(r => {
+      if (r.type === 'TXT') {
+        // TXT records may come as multi-string arrays, normalize for comparison
+        return normalizeTxtRecord(r.value);
+      }
+      return r.value;
+    }).sort();
+    
+    const referenceValues = referenceRecords.map(r => {
+      if (r.type === 'TXT') {
+        // TXT records may come as multi-string arrays, normalize for comparison
+        return normalizeTxtRecord(r.value);
+      }
+      return r.value;
+    }).sort();
     
     return JSON.stringify(resultValues) === JSON.stringify(referenceValues);
   });

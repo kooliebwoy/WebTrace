@@ -24,12 +24,13 @@
   
   // For form submission with enhanced user feedback
   function handleSubmit() {
-    return ({ update }) => {
-      isSubmitting = true;
-      return async ({ result }) => {
-        isSubmitting = false;
+    isSubmitting = true;
+    return async ({ update }) => {
+      try {
         await update();
-      };
+      } finally {
+        isSubmitting = false;
+      }
     };
   }
   
@@ -78,31 +79,22 @@
   <meta name="description" content="Check DNS record propagation across global DNS servers">
 </svelte:head>
 
-<div class="flex flex-col gap-8 pb-8">
+<div class="flex flex-col gap-4 pb-4">
   <header>
-    <h1 class="text-3xl font-bold mb-2 flex items-center gap-2">
-      <Globe class="inline-block" /> DNS Propagation Checker
+    <h1 class="text-xl font-bold flex items-center gap-2">
+      <Globe class="inline-block h-5 w-5" /> DNS Propagation Checker
     </h1>
-    <p class="text-base-content/80">
-      Check how DNS records are propagated across global DNS servers. Track propagation status,
-      compare records, and identify inconsistencies.
-    </p>
   </header>
   
-  <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
     <!-- Input Section -->
-    <div class="lg:col-span-4">
-      <div class="card bg-base-100 shadow-lg">
-        <div class="card-body">
-          <h2 class="card-title flex items-center gap-2 mb-4">
-            <Server class="inline-block h-5 w-5" /> Check Propagation
-          </h2>
+    <div class="lg:col-span-1">
+      <div class="card bg-base-100 shadow-sm">
+        <div class="card-body p-4">
           
-          <form method="post" action="?/checkPropagation" class="flex flex-col gap-4" use:enhance={handleSubmit}>
-            <div class="form-control">
-              <label class="label pb-1" for="domain-input">
-                <span class="label-text font-medium">Domain name</span>
-              </label>
+          <form method="post" action="?/checkPropagation" class="space-y-3" use:enhance={handleSubmit}>
+            <div>
+              <label for="domain-input" class="block text-sm font-medium mb-1">Domain</label>
               <input
                 id="domain-input"
                 type="text"
@@ -113,15 +105,10 @@
                 autocomplete="off"
                 required
               />
-              <label class="label pt-0">
-                <span class="label-text-alt">Enter a domain name without protocol (http/https)</span>
-              </label>
             </div>
             
-            <div class="form-control">
-              <label class="label pb-1" for="record-type-select">
-                <span class="label-text font-medium">Record type</span>
-              </label>
+            <div>
+              <label for="record-type-select" class="block text-sm font-medium mb-1">Record Type</label>
               <select
                 id="record-type-select"
                 name="recordType"
@@ -132,9 +119,6 @@
                   <option value={type.value}>{type.label}</option>
                 {/each}
               </select>
-              <label class="label pt-0">
-                <span class="label-text-alt">Select the DNS record type to check</span>
-              </label>
             </div>
             
             <button
@@ -160,35 +144,14 @@
           {/if}
         </div>
       </div>
-      
-      <!-- How it works -->
-      <div class="card bg-base-100 shadow-lg mt-6">
-        <div class="card-body">
-          <h3 class="card-title text-lg">How it works</h3>
-          <div class="text-sm opacity-90 space-y-2">
-            <p>
-              This tool checks DNS record propagation across multiple global DNS providers to determine if 
-              your DNS changes have propagated worldwide.
-            </p>
-            <p>
-              We query 10 different DNS servers from various providers and locations to verify 
-              your records are consistent and available globally.
-            </p>
-            <p>
-              Results include propagation status, response times, and record consistency to help diagnose 
-              DNS-related issues.
-            </p>
-          </div>
-        </div>
-      </div>
     </div>
     
     <!-- Results Section -->
-    <div class="lg:col-span-8">
+    <div class="lg:col-span-3">
       {#if form && !form.error && form.results}
         <div in:fly={{ y: 20, duration: 300, delay: 300 }}>
           <!-- Summary Card -->
-          <div class="card bg-base-100 shadow-lg mb-6">
+          <div class="card bg-base-100 shadow-lg mb-4">
             <div class="card-body">
               <div class="flex flex-wrap justify-between items-center gap-4">
                 <h2 class="card-title">
@@ -248,45 +211,40 @@
             </div>
           </div>
           
-          <!-- Propagation Timeline -->
-          <div class="card bg-base-100 shadow-lg mb-6">
-            <div class="card-body">
-              <h2 class="card-title mb-4">Propagation Timeline</h2>
+          <!-- Server Status -->
+          <div class="card bg-base-100 shadow-lg mb-4">
+            <div class="card-body p-4">
+              <h2 class="card-title mb-3 text-lg">Server Status</h2>
               
-              <div class="w-full bg-base-200 rounded-full h-4 mb-6">
+              <div class="w-full bg-base-200 rounded-full h-3 mb-4">
                 <div 
-                  class="bg-primary h-4 rounded-full transition-all duration-1000"
+                  class="bg-primary h-3 rounded-full transition-all duration-1000"
                   style="width: {form.propagationPercentage}%"
                 ></div>
               </div>
               
-
-              
-              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {#each form.results as result, i}
                   <div 
-                    class="card bg-base-200 shadow-sm"
-                    in:fly={{y: 20, delay: 400 + (i * 50), duration: 300}}
+                    class="flex items-center justify-between p-2 bg-base-200 rounded-lg"
+                    in:fly={{y: 10, delay: 300 + (i * 30), duration: 200}}
                   >
-                    <div class="card-body p-3">
-                      <div class="flex justify-between items-center">
-                        <h3 class="font-medium">{result.server.name}</h3>
-                        {#if result.propagated}
-                          <span class="badge badge-success gap-1">
-                            <Check class="h-3 w-3" /> Propagated
-                          </span>
-                        {:else}
-                          <span class="badge badge-error gap-1">
-                            <AlertTriangle class="h-3 w-3" /> Not Found
-                          </span>
-                        {/if}
+                    <div class="flex items-center gap-2">
+                      {#if result.propagated}
+                        <Check class="h-4 w-4 text-success" />
+                      {:else}
+                        <AlertTriangle class="h-4 w-4 text-error" />
+                      {/if}
+                      <div>
+                        <div class="font-medium text-sm">{result.server.name}</div>
+                        <div class="text-xs opacity-70">{result.server.provider}</div>
                       </div>
-                      <p class="text-xs opacity-75">{result.server.provider} • {result.server.location}</p>
-                      <p class="text-xs opacity-75">
-                        <span class={getResponseTimeColor(result.responseTime)}>
-                          {formatResponseTime(result.responseTime)}
-                        </span>
-                      </p>
+                    </div>
+                    <div class="text-right">
+                      <div class="text-xs {getResponseTimeColor(result.responseTime)}">
+                        {formatResponseTime(result.responseTime)}
+                      </div>
+                      <div class="text-xs opacity-70">{result.server.location}</div>
                     </div>
                   </div>
                 {/each}
@@ -320,7 +278,7 @@
                         <tr class={result.propagated ? '' : 'opacity-60'}>
                           <td>
                             <div class="font-medium">{result.server.name}</div>
-                            <div class="text-xs opacity-75">{result.server.ip}</div>
+                            <div class="text-xs opacity-75">{result.server.provider}</div>
                           </td>
                           <td>{result.server.location}</td>
                           <td>

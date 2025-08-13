@@ -11,17 +11,11 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
-	"compatibility_date": "2025-04-20",
+	"compatibility_date": "2025-08-13",
 	"routes": [
 		{
-			"pattern": "routekit.motorfeen.com",
+			"pattern": "routekit.kayde.io",
 			"custom_domain": true
-		}
-	],
-	"services": [
-		{
-			"binding": "SERVICE",
-			"service": "platformbuddy"
 		}
 	]
 }
