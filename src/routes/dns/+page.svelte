@@ -155,7 +155,7 @@
       <div class="card-body p-6">
         <form method="post" action="?/dnsLookup" class="flex flex-col gap-4" use:enhance={handleSubmit}>
           <div class="form-control">
-            <label class="label pb-1">
+            <label class="label pb-1" for="dns-domain">
               <span class="label-text font-medium">Domain name</span>
             </label>
             <div class="relative">
@@ -163,6 +163,7 @@
                 type="text" 
                 class="input input-bordered w-full pr-12 font-mono text-sm" 
                 name="domain" 
+                id="dns-domain"
                 bind:value={domain} 
                 placeholder="example.com" 
                 required 
@@ -179,9 +180,9 @@
                 </button>
               {/if}
             </div>
-            <label class="label pt-0">
+            <p class="label pt-0">
               <span class="label-text-alt">Don't include http:// or https://</span>
-            </label>
+            </p>
           </div>
           
           <div class="mt-2">
@@ -313,7 +314,9 @@
                  in:fly={{y: 40, delay: 500 + (i * 150), duration: 400, easing: quintOut}}>
               <!-- Card -->
               <div class="card bg-base-100 shadow-md rounded-lg hover:shadow-lg transition-shadow cursor-pointer"
+                   role="button" tabindex="0"
                    onclick={() => selectRecordType(type)}
+                   onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); selectRecordType(type); } }}
                    class:ring-2={selectedRecordType === type}
                    class:ring-secondary={selectedRecordType === type}
                    class:ring-offset-2={selectedRecordType === type}>

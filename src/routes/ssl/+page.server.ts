@@ -1,6 +1,7 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { getTlsModule, getNetModule, getTimers } from '$lib/server/node-compat';
+import { connect as tlsConnect } from 'node:tls';
+import { setTimeout as setTimeoutNode, clearTimeout } from 'node:timers';
 
 // Define the SSL certificate result structure
 interface Certificate {
@@ -89,17 +90,12 @@ export const actions = {
 
 // Helper function to get SSL certificate
 async function getCertificate(domain: string, port: number): Promise<Certificate> {
-  // Get modules safely using our compatibility helper
-  const tls = await getTlsModule();
-  const net = await getNetModule();
-  const { setTimeout, clearTimeout } = await getTimers();
-  
   return new Promise((resolve, reject) => {
     let isClosed = false;
     let tlsSocket: any;
     
-    // Set connection timeout - reduced to 5 seconds for Cloudflare Workers
-    const timeout = setTimeout(() => {
+    // Set connection timeout
+    const timeout = setTimeoutNode(() => {
       if (!isClosed) {
         isClosed = true;
         if (tlsSocket) tlsSocket.destroy();
@@ -108,8 +104,8 @@ async function getCertificate(domain: string, port: number): Promise<Certificate
     }, 5000);
     
     try {
-      // Using tls.connect with the dynamically imported module
-      tlsSocket = tls.connect({
+      // Using native Node.js tls.connect
+      tlsSocket = tlsConnect({
         host: domain,
         port: port,
         servername: domain,
@@ -128,7 +124,7 @@ async function getCertificate(domain: string, port: number): Promise<Certificate
         }
       });
       
-      tlsSocket.on('error', (err) => {
+      tlsSocket.on('error', (err: Error) => {
         clearTimeout(timeout);
         if (!isClosed) {
           isClosed = true;

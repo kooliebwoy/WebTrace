@@ -89,14 +89,15 @@ export const actions = {
           domain
         };
         
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('[Server Action] Fetch Error:', error);
         return fail(500, { error: 'Failed to connect to WHOIS service' });
       }
       
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[Server Action] WHOIS lookup error:', e);
-      return fail(500, { error: e.message || 'Failed to perform WHOIS lookup' });
+      const message = e instanceof Error ? e.message : 'Failed to perform WHOIS lookup';
+      return fail(500, { error: message });
     }
   }
 } satisfies Actions;
@@ -167,8 +168,8 @@ function combineWhoisData(domain: string, rdapData: any, dnsData: any, validatio
   // Extract nameservers from DNS data
   let nameServers = [];
   if (dnsData?.Answer) {
-    const nsRecords = dnsData.Answer.filter(record => record.type === 2); // NS records
-    nameServers = nsRecords.map(record => record.data);
+    const nsRecords = dnsData.Answer.filter((record: any) => record.type === 2); // NS records
+    nameServers = nsRecords.map((record: any) => record.data);
   }
   
   // Extract data from RDAP (if available)
@@ -180,19 +181,19 @@ function combineWhoisData(domain: string, rdapData: any, dnsData: any, validatio
   
   if (rdapData) {
     if (rdapData.entities && rdapData.entities.length > 0) {
-      const registrarEntity = rdapData.entities.find(e => e.roles && e.roles.includes('registrar'));
+      const registrarEntity = rdapData.entities.find((e: any) => e.roles && e.roles.includes('registrar'));
       if (registrarEntity) {
-        registrar = registrarEntity.vcardArray?.[1]?.find(v => v[0] === 'fn')?.[3] || 
-                   registrarEntity.vcardArray?.[1]?.find(v => v[0] === 'org')?.[3] || 
+        registrar = registrarEntity.vcardArray?.[1]?.find((v: any) => v[0] === 'fn')?.[3] || 
+                   registrarEntity.vcardArray?.[1]?.find((v: any) => v[0] === 'org')?.[3] || 
                    registrarEntity.handle || 'Unknown';
       }
     }
     
     // Extract events
     if (rdapData.events) {
-      const registration = rdapData.events.find(e => e.eventAction === 'registration');
-      const lastChanged = rdapData.events.find(e => e.eventAction === 'last changed');
-      const expiration = rdapData.events.find(e => e.eventAction === 'expiration');
+      const registration = rdapData.events.find((e: any) => e.eventAction === 'registration');
+      const lastChanged = rdapData.events.find((e: any) => e.eventAction === 'last changed');
+      const expiration = rdapData.events.find((e: any) => e.eventAction === 'expiration');
       
       if (registration) createdDate = formatDate(registration.eventDate);
       if (lastChanged) updatedDate = formatDate(lastChanged.eventDate);

@@ -83,7 +83,7 @@
 </script>
 
 <svelte:head>
-  <title>RouteKit - Network Diagnostic Toolkit</title>
+  <title>WebTrace - Network Diagnostic Toolkit</title>
 </svelte:head>
 
 <div class="min-h-screen bg-base-200 flex flex-col items-center p-4 sm:p-6">
@@ -91,7 +91,7 @@
     <!-- <SignIn provider="resend" /> -->
     <!-- Header -->
     <div class="text-center mb-12" in:fade={{duration: 400}}>
-      <h1 class="text-4xl font-bold mb-2">RouteKit</h1>
+      <h1 class="text-4xl font-bold mb-2">WebTrace</h1>
       <p class="text-lg opacity-80">A collection of network and web tools</p>
     </div>
     
@@ -134,7 +134,6 @@
   </div>
   <!-- Footer -->
   <footer class="w-full max-w-[1200px] mx-auto mt-10 flex flex-col items-center justify-center gap-2 text-sm opacity-80">
-    <a href="https://kayde.io" class="link" target="_blank" rel="noopener noreferrer">Developed by Kayde</a>
-    <img src="/kayde-logo.png" alt="Kayde logo" class="h-6 w-auto" />
+    <a href="https://github.com/kooliebwoy/webtrace" class="link" target="_blank" rel="noopener noreferrer">Developed by kooliebwoykg</a>
   </footer>
 </div>

@@ -8,19 +8,6 @@ export default defineConfig({
 		tailwindcss(), 
 		sveltekit()
 	],
-	// Define these modules as external to prevent bundling
-	build: {
-		commonjsOptions: {
-			ignore: ['node:dns', 'node:tls', 'node:net']
-		}
-	},
-	optimizeDeps: {
-		exclude: ['node:dns', 'node:tls', 'node:net']
-	},
-	define: {
-		// Force Vite to treat these modules as external at build time
-		'import.meta.CLOUDFLARE_WORKER': 'true'
-	},
 	test: {
 		environment: 'node',
 		globals: true,

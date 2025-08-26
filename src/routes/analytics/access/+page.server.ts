@@ -26,19 +26,19 @@ export const actions = {
           entries: JSON.stringify(entries),
           logFiles
         };
-      } catch (error) {
+      } catch (error: unknown) {
         ssh.dispose();
         console.error('Error processing logs:', error);
         return fail(500, {
           success: false,
-          error: error.message || 'Failed to process log files'
+          error: error instanceof Error ? error.message : 'Failed to process log files'
         });
       }
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('SSH connection error:', error);
       return fail(400, {
         success: false,
-        error: error.message || 'SSH connection failed'
+        error: error instanceof Error ? error.message : 'SSH connection failed'
       });
     }
   }

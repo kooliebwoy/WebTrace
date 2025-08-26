@@ -41,7 +41,7 @@ export const actions = {
         const fetchPromise = fetch(url, {
           method: 'HEAD', // Try HEAD first
           headers: {
-            'User-Agent': 'RouteKit-Network-Tools/1.0',
+            'User-Agent': 'WebTrace-Network-Tools/1.0',
             'Accept': '*/*',
             'Connection': 'close', // Close connection after request
             'Cache-Control': 'no-cache' // Bypass caches
@@ -55,7 +55,7 @@ export const actions = {
             return fetch(url, {
               method: 'GET',
               headers: {
-                'User-Agent': 'RouteKit-Network-Tools/1.0',
+                'User-Agent': 'WebTrace-Network-Tools/1.0',
                 'Accept': '*/*',
                 'Connection': 'close', // Close connection after request
                 'Cache-Control': 'no-cache' // Bypass caches
@@ -81,13 +81,15 @@ export const actions = {
           if (!response || !response.headers) {
             throw new Error('Invalid response received');
           }
-        } catch (error) {
+        } catch (error: unknown) {
           // Additional error logging and recovery
           console.error(`Headers check failed for ${url}:`, error);
+          const message = error instanceof Error ? error.message : 'Unknown error';
+          const name = error instanceof Error ? error.name : '';
           return fail(500, { 
-            error: error.name === 'AbortError' 
+            error: name === 'AbortError' 
               ? 'Request timed out - the server took too long to respond'
-              : `Request failed: ${error.message || 'Unknown error'}` 
+              : `Request failed: ${message}` 
           });
         }
         
@@ -153,18 +155,21 @@ export const actions = {
           securityScore
         };
         
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error('[Server Action] Fetch error:', error);
+        const message = error instanceof Error ? error.message : 'Unknown error';
+        const name = error instanceof Error ? error.name : '';
         return fail(500, { 
-          error: error.name === 'AbortError' 
+          error: name === 'AbortError' 
             ? 'Request timed out' 
-            : `Failed to fetch headers: ${error.message}` 
+            : `Failed to fetch headers: ${message}` 
         });
       }
       
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('[Server Action] Headers check error:', e);
-      return fail(500, { error: e.message || 'Failed to check headers' });
+      const message = e instanceof Error ? e.message : 'Failed to check headers';
+      return fail(500, { error: message });
     }
   }
 } satisfies Actions;

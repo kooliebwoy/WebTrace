@@ -1,7 +1,6 @@
 import { fail } from '@sveltejs/kit';
 import type { Actions } from './$types';
-import { getDnsModule } from '$lib/server/node-compat';
-import { promisify } from 'util';
+import { query } from '$lib/server/dns';
 import { normalizeTxtRecord } from '$lib/server/txt-normalization';
 
 // SPF Validation Result Interface
@@ -64,10 +63,6 @@ export const actions = {
 
 // Function to check SPF records for a domain
 async function checkSPFRecords(domain: string): Promise<SPFResult> {
-  // Get DNS module safely using our compatibility helper
-  const dns = await getDnsModule();
-  const resolveTxt = promisify(dns.resolveTxt);
-  
   const result: SPFResult = {
     domain,
     records: {
@@ -83,14 +78,13 @@ async function checkSPFRecords(domain: string): Promise<SPFResult> {
   };
 
   try {
-    // Fetch TXT records
-    const txtRecords = await resolveTxt(domain);
+    // Fetch TXT records using native DNS
+    const txtRecords = await query(domain, 'TXT');
     
     // Filter for SPF records
-    const spfRecords = txtRecords.filter(record => {
-      const recordStr = normalizeTxtRecord(record);
-      return recordStr.toLowerCase().startsWith('v=spf1');
-    });
+    const spfRecords = txtRecords
+      .map(record => record.value) // Extract the value from DNSRecord
+      .filter(recordStr => recordStr.toLowerCase().startsWith('v=spf1'));
 
     if (spfRecords.length === 0) {
       result.errors.push('No SPF record found');

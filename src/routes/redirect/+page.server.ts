@@ -48,8 +48,9 @@ export const actions: Actions = {
           headers[key] = value;
         });
 
-        if (res.status >= 300 && res.status < 400 && res.headers.get('location')) {
-          const nextUrl = new URL(res.headers.get('location'), currentUrl).href;
+        const loc = res.headers.get('location');
+        if (res.status >= 300 && res.status < 400 && loc) {
+          const nextUrl = new URL(loc, currentUrl).href;
           console.log(`[Server Action] Redirect found: ${currentUrl} -> ${nextUrl} (${res.status})`); // <-- Log redirect
           
           // Store the redirect with headers

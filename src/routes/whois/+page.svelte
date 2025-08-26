@@ -2,10 +2,9 @@
   import { enhance } from '$app/forms';
   import { fade, fly } from 'svelte/transition';
   import { Database, ArrowLeft, Clock, Globe, Building, User, Mail, MapPin, XCircle, Check, Copy, FileText } from '@lucide/svelte';
-  import type { ActionData, PageData } from './$types';
+  import type { ActionData } from './$types';
   import { goto } from '$app/navigation';
   
-  export let data: PageData;
   export let form: ActionData;
   
   let domain = '';
@@ -16,27 +15,34 @@
   $: whoisData = form?.whoisData;
   $: error = form?.error;
   
-  function handleSubmit({ form, data, action, cancel, submitter }) {
+  const handleSubmit = ({ action, formData, formElement, controller, submitter, cancel }: {
+    action: URL;
+    formData: FormData;
+    formElement: HTMLFormElement;
+    controller: AbortController;
+    submitter: HTMLElement | null;
+    cancel: () => void;
+  }) => {
     isLoading = true;
     
-    return async ({ result, update }) => {
+    return async ({ result, update }: { result: unknown; update: () => Promise<void> }) => {
       isLoading = false;
       await update();
     };
-  }
+  };
   
-  function copyToClipboard(text) {
+  function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
     showCopiedToast = true;
     setTimeout(() => showCopiedToast = false, 2000);
   }
   
-  function formatDate(dateStr) {
+  function formatDate(dateStr: string | null | undefined): string {
     if (!dateStr) return 'N/A';
     return dateStr;
   }
   
-  function getRemainingDays(expiryDate) {
+  function getRemainingDays(expiryDate: string | null | undefined): number | null {
     if (!expiryDate || expiryDate === 'N/A') return null;
     
     try {
@@ -52,14 +58,14 @@
   
   $: remainingDays = whoisData ? getRemainingDays(whoisData.expiresDate) : null;
   
-  function getExpiryStatusClass(days) {
+  function getExpiryStatusClass(days: number | null): string {
     if (days === null) return 'badge-outline';
     if (days <= 0) return 'badge-error';
     if (days <= 30) return 'badge-warning';
     return 'badge-success';
   }
   
-  function getExpiryStatusText(days) {
+  function getExpiryStatusText(days: number | null): string {
     if (days === null) return 'Unknown';
     if (days <= 0) return 'Expired';
     if (days <= 30) return `Expires soon (${days} days)`;
@@ -100,7 +106,7 @@
       <div class="card-body p-6">
         <form method="post" action="?/whoisLookup" class="flex flex-col gap-4" use:enhance={handleSubmit}>
           <div class="form-control">
-            <label class="label pb-1">
+            <label class="label pb-1" for="whois-domain">
               <span class="label-text font-medium">Domain name</span>
             </label>
             <div class="relative">
@@ -108,6 +114,7 @@
                 type="text" 
                 class="input input-bordered w-full pr-12 font-mono text-sm" 
                 name="domain" 
+                id="whois-domain"
                 bind:value={domain} 
                 placeholder="example.com" 
                 required 
@@ -124,9 +131,9 @@
                 </button>
               {/if}
             </div>
-            <label class="label pt-0">
+            <p class="label pt-0">
               <span class="label-text-alt">Don't include http:// or https://</span>
-            </label>
+            </p>
           </div>
           
           <button 
@@ -162,7 +169,7 @@
         <div class="bg-base-200 p-4 border-b border-base-300 flex justify-between items-center">
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <Database class="w-5 h-5" />
-            {form.domain}
+            {form?.domain ?? domain}
           </h3>
           
           <div class="flex gap-2">

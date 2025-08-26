@@ -57,14 +57,14 @@ export const actions = {
           const result = await querySingleServer(domain, recordType, server);
           results.push(result);
           console.log(`[Propagation] ${server.name} completed: ${result.propagated ? 'success' : 'failed'}`);
-        } catch (error) {
+        } catch (error: unknown) {
           console.error(`[Propagation] ${server.name} error:`, error);
           results.push({
             server,
             records: [],
             propagated: false,
             responseTime: 0,
-            error: error.message
+            error: error instanceof Error ? error.message : 'Query failed'
           });
         }
       }
@@ -87,9 +87,10 @@ export const actions = {
         isConsistent,
         timestamp: new Date().toISOString()
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('[Server Action] DNS propagation check error:', error);
-      return fail(500, { error: error.message || 'Failed to check DNS propagation' });
+      const message = error instanceof Error ? error.message : 'Failed to check DNS propagation';
+      return fail(500, { error: message });
     }
   }
 } satisfies Actions;
@@ -177,7 +178,7 @@ async function querySingleServer(
       propagated: result.records.length > 0,
       responseTime: result.elapsed
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
     const responseTime = Date.now() - startTime;
     console.error(`DNS query error for ${server.name}:`, error);
     
@@ -186,7 +187,7 @@ async function querySingleServer(
       records: [],
       propagated: false,
       responseTime,
-      error: error.message
+      error: error instanceof Error ? error.message : 'DNS query error'
     };
   }
 }

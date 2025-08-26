@@ -1,9 +1,18 @@
 /**
- * DNS-over-HTTPS (DoH) helper using Web-standard APIs
- * Works in both Cloudflare Workers and local Vite preview
+ * DNS-over-HTTPS (DoH) client for Node/SvelteKit (adapter-node)
+ *
+ * Supports common JSON DoH endpoints:
+ *  - Cloudflare: https://cloudflare-dns.com/dns-query?name=example.com&type=TXT
+ *  - Cloudflare (Mozilla): https://mozilla.cloudflare-dns.com/dns-query?name=example.com&type=TXT
+ *  - Google: https://dns.google/resolve?name=example.com&type=TXT
+ *  - AliDNS: https://dns.alidns.com/resolve?name=example.com&type=TXT
+ *  - DNS.SB: https://doh.sb/dns-query?name=example.com&type=TXT
+ *  - NextDNS: https://dns.nextdns.io/dns-query?name=example.com&type=TXT
+ *
+ * Returns a normalized structure compatible with the propagation module.
  */
 
-import { normalizeTxtRecord } from '$lib/server/txt-normalization';
+import { normalizeTxtRecord } from './txt-normalization';
 
 export interface DNSRecord {
   type: string;
@@ -11,44 +20,13 @@ export interface DNSRecord {
   ttl?: number;
 }
 
-export interface DoHResponse {
-  Status: number;
-  TC?: boolean;
-  RD?: boolean;
-  RA?: boolean;
-  AD?: boolean;
-  CD?: boolean;
-  Question?: Array<{
-    name: string;
-    type: number;
-  }>;
-  Answer?: Array<{
-    name: string;
-    type: number;
-    TTL: number;
-    data: string;
-  }>;
-}
-
 export interface DoHResult {
   records: DNSRecord[];
-  rcode: number;
   elapsed: number;
 }
 
-// DNS record type constants
-const DNS_RECORD_TYPES = {
-  A: 1,
-  NS: 2,
-  CNAME: 5,
-  SOA: 6,
-  MX: 15,
-  TXT: 16,
-  AAAA: 28,
-  CAA: 257
-} as const;
-
-const REVERSE_DNS_TYPES = {
+// Map RR numeric type codes to string names (subset)
+const TYPE_MAP: Record<number, string> = {
   1: 'A',
   2: 'NS',
   5: 'CNAME',
@@ -56,133 +34,105 @@ const REVERSE_DNS_TYPES = {
   15: 'MX',
   16: 'TXT',
   28: 'AAAA',
+  33: 'SRV',
   257: 'CAA'
-} as const;
+};
+
+function rrToString(type: number): string {
+  return TYPE_MAP[type] ?? String(type);
+}
+
+function normalizeRecord(rrtype: string, data: any): DNSRecord | null {
+  // TXT records often come quoted or as joined strings already in DoH JSON
+  if (rrtype === 'TXT') {
+    // data may be quoted string like "\"v=spf1 ...\"" or multiple chunks joined
+    const normalized = normalizeTxtRecord(String(data));
+    return { type: 'TXT', value: normalized };
+  }
+
+  if (rrtype === 'MX') {
+    // Some JSON providers return just the exchange in Answer.data (priority encoded elsewhere).
+    // In JSON DoH, MX usually appears as "priority exchange" e.g. "10 mail.example.com.".
+    const str = String(data);
+    return { type: 'MX', value: str };
+  }
+
+  if (rrtype === 'CAA') {
+    // Usually like: "0 issue \"letsencrypt.org\""
+    return { type: 'CAA', value: String(data) };
+  }
+
+  // Default: return as is
+  return { type: rrtype, value: String(data) };
+}
 
 /**
- * Fetch-based DNS-over-HTTPS helper
- * @param serverUrl DoH server URL (e.g., 'https://cloudflare-dns.com/dns-query')
- * @param name Domain name to query
- * @param type DNS record type ('A', 'AAAA', 'MX', 'TXT', 'NS', 'CNAME')
- * @param timeoutMs Timeout in milliseconds (default: 2000)
- * @returns Promise<DoHResult>
- * @throws Error on network failure or non-NOERROR responses
+ * Perform a DoH query with timeout using common JSON formats.
  */
-export async function dohQuery(
-  serverUrl: string,
-  name: string,
-  type: string,
-  timeoutMs: number = 2000
-): Promise<DoHResult> {
-  const startTime = Date.now();
-  
-  // Create AbortController for timeout
+export async function dohQuery(baseUrl: string, domain: string, recordType: string, timeoutMs = 3000): Promise<DoHResult> {
+  const start = Date.now();
+
+  // Determine parameter shape: Google uses /resolve with name/type; Cloudflare and others accept /dns-query with name/type
+  const url = new URL(baseUrl);
+  const type = recordType.toUpperCase();
+
+  // Clear existing search params to avoid duplicates
+  url.searchParams.delete('name');
+  url.searchParams.delete('type');
+
+  // Both formats accept name/type in query for JSON responses
+  url.searchParams.set('name', domain);
+  url.searchParams.set('type', type);
+
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const id = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
-    // Build query string
-    const typeCode = DNS_RECORD_TYPES[type.toUpperCase() as keyof typeof DNS_RECORD_TYPES] || type;
-    const queryParams = new URLSearchParams({
-      name: name,
-      type: typeCode.toString(),
-      cd: 'true' // Checking Disabled flag
-    });
-
-    const url = `${serverUrl}?${queryParams.toString()}`;
-
-    // Make the request
-    const response = await fetch(url, {
+    const res = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        'Accept': 'application/dns-json',
-        'User-Agent': 'RouteKit-DoH/1.0'
+        // Cloudflare/others return JSON when requesting this Accept header
+        'Accept': 'application/dns-json, application/json;q=0.9, */*;q=0.8'
       },
       signal: controller.signal
     });
 
-    clearTimeout(timeoutId);
+    const elapsed = Date.now() - start;
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    if (!res.ok) {
+      throw new Error(`DoH HTTP ${res.status}`);
     }
 
-    const data: DoHResponse = await response.json();
-    const elapsed = Date.now() - startTime;
+    // Expect a JSON body with an Answer array per RFC8484 JSON profiles used by Google/Cloudflare
+    // Some providers may return application/json with fields: { Status, Answer: [{ name, type, TTL, data }] }
+    const body = await res.json().catch(() => ({}));
 
-    // Check DNS response code (RCODE)
-    if (data.Status !== 0) {
-      throw new Error(`DNS query failed with RCODE ${data.Status}`);
+    const answers: Array<{ name: string; type: number; TTL?: number; data: string }>
+      = Array.isArray(body?.Answer) ? body.Answer : [];
+
+    const records: DNSRecord[] = [];
+
+    for (const ans of answers) {
+      const rr = rrToString(ans.type);
+      if (rr !== type) {
+        // Some resolvers include CNAME/A chains; only include requested type
+        if (type !== 'TXT' || rr !== 'TXT') continue;
+      }
+      const rec = normalizeRecord(rr, ans.data);
+      if (rec) {
+        if (typeof ans.TTL === 'number') rec.ttl = ans.TTL;
+        records.push(rec);
+      }
     }
 
-    // Map DoH response to DNSRecord format
-    const records: DNSRecord[] = data.Answer 
-      ? data.Answer.map(answer => {
-          const recordType = REVERSE_DNS_TYPES[answer.type as keyof typeof REVERSE_DNS_TYPES] || `TYPE${answer.type}`;
-          let recordValue = answer.data;
-          
-          // Normalize TXT records according to RFC 1035
-          if (recordType === 'TXT') {
-            recordValue = normalizeTxtRecord(answer.data);
-          }
-          
-          return {
-            type: recordType,
-            value: recordValue,
-            ttl: answer.TTL
-          };
-        })
-      : [];
-
-    return {
-      records,
-      rcode: data.Status,
-      elapsed
-    };
-
-  } catch (error) {
-    clearTimeout(timeoutId);
-    
-    // Handle AbortController timeout
-    if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error(`DNS query timed out after ${timeoutMs}ms`);
+    return { records, elapsed };
+  } catch (err) {
+    const elapsed = Date.now() - start;
+    if ((err as any)?.name === 'AbortError') {
+      throw new Error(`DoH timed out after ${timeoutMs}ms`);
     }
-    
-    // Handle network errors
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      throw new Error(`Network error: ${error.message}`);
-    }
-    
-    // Re-throw other errors
-    throw error;
+    throw err instanceof Error ? err : new Error(String(err));
+  } finally {
+    clearTimeout(id);
   }
-}
-
-/**
- * Multi-provider DoH query with automatic fallback
- * Uses Cloudflare as primary, Google as fallback
- */
-export async function dohQueryWithFallback(
-  name: string,
-  type: string,
-  timeoutMs: number = 2000
-): Promise<DoHResult> {
-  const providers = [
-    'https://cloudflare-dns.com/dns-query',
-    'https://dns.google/resolve'
-  ];
-
-  let lastError: Error | null = null;
-
-  for (const provider of providers) {
-    try {
-      return await dohQuery(provider, name, type, timeoutMs);
-    } catch (error) {
-      lastError = error as Error;
-      // Continue to next provider
-    }
-  }
-
-  // All providers failed
-  throw lastError || new Error('All DoH providers failed');
 }

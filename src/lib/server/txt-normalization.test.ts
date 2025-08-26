@@ -143,7 +143,7 @@ describe('areTxtRecordsEquivalent', () => {
 
   it('should handle empty values', () => {
     const value1 = '';
-    const value2 = [];
+    const value2: string[] = [];
     const result = areTxtRecordsEquivalent(value1, value2);
     
     expect(result).toBe(true);

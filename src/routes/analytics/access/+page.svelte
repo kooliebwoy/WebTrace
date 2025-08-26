@@ -6,7 +6,7 @@
 	import { LucideLoader, LucideLock, LucideServer, LucideTerminal, LucideUser, LucideGlobe, LucideFile, LucideArchive, LucideCalendar, LucideRefreshCw, LucideArrowRight, LucideInfo, LucideKey, LucideAlertCircle } from '@lucide/svelte';
 	import type { ActionData } from './$types';
 
-	let { data, form }: { data: any, form: ActionData } = $props();
+	let { data, form }: { data: any; form: ActionData } = $props();
 	
 	let isLoading = $state(false);
 	let showPrivateKey = $state(false);
@@ -19,18 +19,33 @@
 	let statusDistributionData = $state(null);
 	let topIpsData = $state(null);
 
-	const allLogs = $derived(form?.success && form.entries ? JSON.parse(form.entries, (key, value) => {
+	interface LogEntry {
+		id: string | number;
+		timestamp: Date;
+		statusType: 'success' | 'redirect' | 'error' | string;
+		status: number;
+		method: string;
+		path: string;
+		ip: string;
+		referrer: string;
+		userAgent: string;
+		size: number;
+		sourceFile?: string;
+		rawLog: string;
+	}
+
+	const allLogs: LogEntry[] = $derived(form?.success && form.entries ? JSON.parse(form.entries, (key, value) => {
 		if (key === 'timestamp') return new Date(value);
 		return value;
 	}) : []);
 
 	const availableLogFiles = $derived(form?.logFiles || []);
 
-	const availableMethods = $derived([...new Set(allLogs.map(e => e.method))]);
+	const availableMethods: string[] = $derived([...new Set(allLogs.map((e: LogEntry) => e.method))]);
 	const availableStatusTypes = ['success', 'redirect', 'error'];
 
-	const filteredLogEntries = $derived(allLogs.filter(entry => {
-		const fileMatch = selectedLogFiles.length === 0 || (entry.sourceFile && selectedLogFiles.includes(entry.sourceFile));
+	const filteredLogEntries: LogEntry[] = $derived(allLogs.filter((entry: LogEntry) => {
+		const fileMatch = selectedLogFiles.length === 0 || (!!entry.sourceFile && selectedLogFiles.includes(entry.sourceFile));
 		const methodMatch = selectedMethods.length === 0 || selectedMethods.includes(entry.method);
 		const statusMatch = selectedStatusTypes.length === 0 || selectedStatusTypes.includes(entry.statusType);
 
@@ -38,7 +53,7 @@
 		const searchMatch = query === '' ||
 			entry.path.toLowerCase().includes(query) ||
 			entry.ip.toLowerCase().includes(query) ||
-			entry.referrer.toLowerCase().includes(query) ||
+			(entry.referrer || '').toLowerCase().includes(query) ||
 			entry.userAgent.toLowerCase().includes(query);
 
 		return fileMatch && methodMatch && statusMatch && searchMatch;
@@ -48,7 +63,7 @@
 		if (filteredLogEntries.length > 0) {
 			const worker = new AnalyticsWorker();
 
-			worker.onmessage = (event) => {
+			worker.onmessage = (event: MessageEvent) => {
 				statusDistributionData = event.data.statusDistributionData;
 				topIpsData = event.data.topIpsData;
 				worker.terminate();
@@ -75,7 +90,9 @@
 	}
 
 	function selectAllLogFiles() {
-		selectedLogFiles = availableLogFiles.map(file => file.name);
+		selectedLogFiles = availableLogFiles
+			.map((file) => file.name)
+			.filter((n): n is string => Boolean(n));
 	}
 
 	function deselectAllLogFiles() {
@@ -104,7 +121,7 @@
 </script>
 
 <svelte:head>
-	<title>Access Logs | Route Analytics</title>
+	<title>Access Logs | WebTrace Analytics</title>
 </svelte:head>
 
 <div class="container mx-auto p-4">
@@ -211,7 +228,6 @@
 									placeholder="-----BEGIN RSA PRIVATE KEY-----" 
 									class="textarea textarea-bordered w-full h-24" 
 									style="font-family: monospace;"
-									type={showPrivateKey ? 'text' : 'password'}
 								></textarea>
 							</div>
 						{/if}
@@ -348,8 +364,9 @@
 							<div class="flex flex-wrap gap-2">
 								{#each availableLogFiles as file}
 									<button 
-										class="btn btn-sm {selectedLogFiles.includes(file.name) ? 'btn-primary' : 'btn-outline'}"
-										onclick={() => toggleLogFileSelection(file.name)}
+										class="btn btn-sm {selectedLogFiles.includes(file.name ?? '') ? 'btn-primary' : 'btn-outline'}"
+										onclick={() => file.name && toggleLogFileSelection(file.name)}
+										disabled={!file.name}
 									>
 										{#if file.compressed}
 											<LucideArchive class="w-4 h-4 mr-1" />
@@ -427,14 +444,10 @@
 									</tbody>
 								</table>
 							</div>
-						{:else if form.logContent}
-							<div class="p-4 text-center">
-								<p>Log files exist but contain no valid log entries.</p>
-							</div>
-						{:else}
-							<div class="p-4 text-center">
-								<p>No log content to display. Fetch logs using the form above.</p>
-							</div>
+							{:else}
+								<div class="p-4 text-center">
+									<p>No log entries to display.</p>
+								</div>
 						{/if}
 					</div>
 				{:else}

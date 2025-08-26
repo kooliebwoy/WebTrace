@@ -1,7 +1,8 @@
 <script lang="ts">
 	import { LucideActivity, LucideTerminal, LucideAlertTriangle, LucideGlobe } from '@lucide/svelte';
 	
-	export let data = {
+	type PageMeta = { title: string; description: string };
+	const data: PageMeta = {
 		title: 'Analytics Dashboard',
 		description: 'View and analyze server logs'
 	};

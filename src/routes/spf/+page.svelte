@@ -1,12 +1,11 @@
 <script lang="ts">
   import { enhance } from '$app/forms';
-  import type { ActionData, PageData } from './$types';
+  import type { ActionData } from './$types';
   import { fade, fly } from 'svelte/transition';
   import { quintOut } from 'svelte/easing';
   import { Mail, ChevronLeft, AlertCircle, CheckCircle, XCircle, AlertTriangle } from '@lucide/svelte';
   import { onMount } from 'svelte';
 
-  export let data: PageData;
   export let form: ActionData;
 
   let isLoading = false;
@@ -81,7 +80,7 @@
 </script>
 
 <svelte:head>
-  <title>SPF Validator | RouteKit</title>
+  <title>SPF Validator | WebTrace</title>
 </svelte:head>
 
 <div class="min-h-screen flex items-center justify-center px-4 py-6 bg-base-200">
@@ -116,7 +115,7 @@
       <div class="card-body p-6">
         <form method="post" action="?/spfCheck" class="flex flex-col gap-4" use:enhance={handleSubmit}>
           <div class="form-control">
-            <label class="label pb-1">
+            <label class="label pb-1" for="domain-input">
               <span class="label-text font-medium">Domain name</span>
             </label>
             <input 
@@ -128,9 +127,9 @@
               class="input input-bordered w-full"
               required
             />
-            <label class="label pt-1">
+            <p class="label pt-1">
               <span class="label-text-alt opacity-70">Enter a domain to check its SPF records</span>
-            </label>
+            </p>
           </div>
           
           {#if form?.error}
@@ -292,19 +291,19 @@
                   <li>Add an SPF record to protect your domain from email spoofing.</li>
                 {/if}
                 
-                {#if !spfData.records.parsed.some(item => item.type === 'all' && item.value === '-all')}
+                {#if !spfData.records.parsed.some((item: any) => item.type === 'all' && item.value === '-all')}
                   <li>Add a "-all" mechanism as the last element to block unauthorized senders.</li>
                 {/if}
                 
-                {#if spfData.records.parsed.some(item => item.type === 'all' && (item.value === '+all' || item.value === 'all'))}
+                {#if spfData.records.parsed.some((item: any) => item.type === 'all' && (item.value === '+all' || item.value === 'all'))}
                   <li class="text-error font-medium">Replace "+all" with "-all" to prevent email spoofing!</li>
                 {/if}
                 
-                {#if spfData.records.parsed.some(item => item.type === 'all' && item.value === '?all')}
+                {#if spfData.records.parsed.some((item: any) => item.type === 'all' && item.value === '?all')}
                   <li>Consider replacing "?all" with "~all" or "-all" for better security.</li>
                 {/if}
                 
-                {#if !spfData.records.parsed.some(item => item.type === 'ip4' || item.type === 'ip6' || item.type === 'a' || item.type === 'mx')}
+                {#if !spfData.records.parsed.some((item: any) => item.type === 'ip4' || item.type === 'ip6' || item.type === 'a' || item.type === 'mx')}
                   <li>Add specific mechanisms (ip4, ip6, a, mx) to authorize your legitimate email servers.</li>
                 {/if}
                 

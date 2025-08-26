@@ -23,9 +23,16 @@
   let isSubmitting = false;
   
   // For form submission with enhanced user feedback
-  function handleSubmit() {
+  function handleSubmit(_args?: {
+    action: URL;
+    formData: FormData;
+    formElement: HTMLFormElement;
+    controller: AbortController;
+    submitter: HTMLElement | null;
+    cancel: () => void;
+  }) {
     isSubmitting = true;
-    return async ({ update }) => {
+    return async ({ update }: { update: () => Promise<void>; result?: unknown }) => {
       try {
         await update();
       } finally {
@@ -56,10 +63,18 @@
   }
   
   // Group results by geographic region
-  function groupByRegion(results) {
-    const groups = {};
+  type PropagationResult = {
+    propagated: boolean;
+    responseTime: number;
+    error?: string;
+    records?: Array<{ value: string }>;
+    server: { name: string; provider: string; location: string };
+  };
+
+  function groupByRegion(results: PropagationResult[]): Array<{ region: string; servers: PropagationResult[] }> {
+    const groups: Record<string, PropagationResult[]> = {};
     
-    results.forEach(result => {
+    results.forEach((result) => {
       const region = result.server.location;
       if (!groups[region]) {
         groups[region] = [];
@@ -75,7 +90,7 @@
 </script>
 
 <svelte:head>
-  <title>DNS Propagation Checker | RouteKit</title>
+  <title>DNS Propagation Checker | WebTrace</title>
   <meta name="description" content="Check DNS record propagation across global DNS servers">
 </svelte:head>
 

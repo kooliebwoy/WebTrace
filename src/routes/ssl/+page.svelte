@@ -2,10 +2,9 @@
   import { enhance } from '$app/forms';
   import { fade, fly } from 'svelte/transition';
   import { LockKeyhole, ArrowLeft, Calendar, Shield, Award, AlertTriangle, XCircle, Check, Info, Copy } from '@lucide/svelte';
-  import type { ActionData, PageData } from './$types';
+  import type { ActionData } from './$types';
   import { goto } from '$app/navigation';
   
-  export let data: PageData;
   export let form: ActionData;
   
   let domain = '';
@@ -15,16 +14,23 @@
   $: sslData = form?.certificate;
   $: error = form?.error;
   
-  function handleSubmit({ form, data, action, cancel, submitter }) {
+  const handleSubmit = ({ action, formData, formElement, controller, submitter, cancel }: {
+    action: URL;
+    formData: FormData;
+    formElement: HTMLFormElement;
+    controller: AbortController;
+    submitter: HTMLElement | null;
+    cancel: () => void;
+  }) => {
     isLoading = true;
     
-    return async ({ result, update }) => {
+    return async ({ result, update }: { result: unknown; update: () => Promise<void> }) => {
       isLoading = false;
       await update();
     };
-  }
+  };
   
-  function getStatusColor(status) {
+  function getStatusColor(status: string) {
     switch (status) {
       case 'valid': return 'success';
       case 'warning': return 'warning';
@@ -33,7 +39,7 @@
     }
   }
   
-  function getStatusIcon(status) {
+  function getStatusIcon(status: string) {
     switch (status) {
       case 'valid': return Check;
       case 'warning': return AlertTriangle;
@@ -42,7 +48,7 @@
     }
   }
   
-  function getStatusText(status, days) {
+  function getStatusText(status: string, days: number) {
     switch (status) {
       case 'valid': return `Valid (expires in ${days} days)`;
       case 'warning': return `Expiring soon (${days} days)`;
@@ -51,7 +57,7 @@
     }
   }
   
-  function copyToClipboard(text) {
+  function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
     showCopiedToast = true;
     setTimeout(() => showCopiedToast = false, 2000);
@@ -91,7 +97,7 @@
       <div class="card-body p-6">
         <form method="post" action="?/sslCheck" class="flex flex-col gap-4" use:enhance={handleSubmit}>
           <div class="form-control">
-            <label class="label pb-1">
+            <label class="label pb-1" for="ssl-domain">
               <span class="label-text font-medium">Domain name</span>
             </label>
             <div class="relative">
@@ -99,6 +105,7 @@
                 type="text" 
                 class="input input-bordered w-full pr-12 font-mono text-sm" 
                 name="domain" 
+                id="ssl-domain"
                 bind:value={domain} 
                 placeholder="example.com" 
                 required 
@@ -115,9 +122,9 @@
                 </button>
               {/if}
             </div>
-            <label class="label pt-0">
+            <p class="label pt-0">
               <span class="label-text-alt">Don't include http:// or https://</span>
-            </label>
+            </p>
           </div>
           
           <button 
@@ -153,7 +160,7 @@
         <div class="bg-base-200 p-4 border-b border-base-300">
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <Shield class="w-5 h-5" />
-            SSL Certificate for {form.domain}
+            SSL Certificate for {form?.domain ?? domain}
           </h3>
         </div>
         

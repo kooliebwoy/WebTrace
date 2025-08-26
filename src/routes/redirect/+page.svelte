@@ -7,7 +7,7 @@
   import { browser } from '$app/environment';
 
   // Props derived from server (may not update reliably if types are broken)
-  let { form }: PageProps = $props(); 
+  let { form } = $props(); 
   // Local state for UI
   let url = $state('');
   let isLoading = $state(false);
@@ -51,7 +51,7 @@
   }
 
   // Enhance callback to manage loading and manually update local state
-  const handleSubmit: SubmitFunction = ({ formData }) => {
+  const handleSubmit = ({ formData }: { formData: FormData }) => {
     // Format URL if needed before submission
     const rawUrl = formData.get('url') as string;
     formData.set('url', formatUrl(rawUrl));
@@ -62,7 +62,7 @@
     errorMessage = '';
     finalStatus = null; // Reset final status
 
-    return async ({ result }: { result: ActionResult }) => {
+    return async ({ result }: { result: any }) => {
       console.log('[Client Page] Enhance callback result:', result);
       isLoading = false;
       
@@ -141,7 +141,7 @@
       <div class="card-body p-6">
         <form method="post" action="?/redirectCheck" class="flex flex-col gap-4" use:enhance={handleSubmit}>
           <div class="form-control">
-            <label class="label pb-1">
+            <label class="label pb-1" for="redirect-url">
               <span class="label-text font-medium">Domain or URL</span>
             </label>
             <div class="relative">
@@ -149,6 +149,7 @@
                 type="text" 
                 class="input input-bordered w-full pr-12 font-mono text-sm" 
                 name="url" 
+                id="redirect-url"
                 bind:value={url} 
                 placeholder="example.com" 
                 required 
@@ -165,9 +166,9 @@
                 </button>
               {/if}
             </div>
-            <label class="label pt-0">
+            <p class="label pt-0">
               <span class="label-text-alt">No need to add https:// - we'll handle that</span>
-            </label>
+            </p>
           </div>
           
           <button 
@@ -237,7 +238,9 @@
                 
                 <!-- Card -->
                 <div class="card bg-base-100 shadow-md rounded-lg ml-14 hover:shadow-lg transition-shadow cursor-pointer"
+                     role="button" tabindex="0"
                      onclick={() => selectStep(i)}
+                     onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectStep(i)}
                      class:ring-2={selectedStep === i}
                      class:ring-primary={selectedStep === i}
                      class:ring-offset-2={selectedStep === i}>
@@ -283,7 +286,9 @@
                 
                 <!-- Final card -->
                 <div class="card bg-base-100 shadow-md rounded-lg ml-14 hover:shadow-lg transition-shadow cursor-pointer"
+                     role="button" tabindex="0"
                      onclick={() => selectStep(redirectChain.length)}
+                     onkeydown={(e) => (e.key === 'Enter' || e.key === ' ') && selectStep(redirectChain.length)}
                      class:ring-2={selectedStep === redirectChain.length}
                      class:ring-primary={selectedStep === redirectChain.length}
                      class:ring-offset-2={selectedStep === redirectChain.length}>
@@ -291,7 +296,7 @@
                     <!-- Final destination header -->
                     <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
                       <span class="badge badge-sm badge-outline">Final Destination</span>
-                      {#if finalStatus}
+                      {#if finalStatus !== null}
                         <span class="badge badge-sm" 
                               class:badge-info={finalStatus >= 300 && finalStatus < 400}
                               class:badge-success={finalStatus >= 200 && finalStatus < 300}
@@ -380,12 +385,16 @@
                   
                   <div class="flex items-center gap-2 mt-3">
                     <div class="font-medium text-sm opacity-80">Status Code</div>
-                    <span class="badge" 
-                          class:badge-info={finalStatus >= 300 && finalStatus < 400}
-                          class:badge-success={finalStatus >= 200 && finalStatus < 300}
-                          class:badge-error={finalStatus >= 400}>
-                      {finalStatus}
-                    </span>
+                    {#if finalStatus !== null}
+                      <span class="badge" 
+                            class:badge-info={finalStatus >= 300 && finalStatus < 400}
+                            class:badge-success={finalStatus >= 200 && finalStatus < 300}
+                            class:badge-error={finalStatus >= 400}>
+                        {finalStatus}
+                      </span>
+                    {:else}
+                      <span class="badge badge-ghost">N/A</span>
+                    {/if}
                   </div>
                   
                   <div class="divider my-3">Headers</div>

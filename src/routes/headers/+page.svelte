@@ -2,10 +2,9 @@
   import { enhance } from '$app/forms';
   import { fade, fly, slide } from 'svelte/transition';
   import { Globe, ArrowLeft, Check, XCircle, Shield, Clock, Server as ServerIcon, Code } from '@lucide/svelte';
-  import type { ActionData, PageData } from './$types';
+  import type { ActionData } from './$types';
   import { goto } from '$app/navigation';
   
-  export let data: PageData;
   export let form: ActionData;
   
   let url = '';
@@ -18,22 +17,29 @@
   $: securityScore = form?.securityScore;
   $: error = form?.error;
   
-  function handleSubmit({ form, data, action, cancel, submitter }) {
+  function handleSubmit({ action, formData, formElement, controller, submitter, cancel }: {
+    action: URL;
+    formData: FormData;
+    formElement: HTMLFormElement;
+    controller: AbortController;
+    submitter: HTMLElement | null;
+    cancel: () => void;
+  }) {
     isLoading = true;
     
-    return async ({ result, update }) => {
+    return async ({ result, update }: { result: unknown; update: () => Promise<void> }) => {
       isLoading = false;
       await update();
     };
   }
   
-  function copyToClipboard(text) {
+  function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
     showCopiedToast = true;
     setTimeout(() => showCopiedToast = false, 2000);
   }
   
-  function getScoreColor(score) {
+  function getScoreColor(score: number) {
     if (score >= 80) return 'success';
     if (score >= 60) return 'warning';
     if (score >= 40) return 'info';
@@ -41,10 +47,10 @@
   }
   
   // Function to convert header names to more readable format
-  function formatHeaderName(name) {
+  function formatHeaderName(name: string) {
     return name
       .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .map((word: string) => word.charAt(0).toUpperCase() + word.slice(1))
       .join('-');
   }
 </script>
@@ -82,7 +88,7 @@
       <div class="card-body p-6">
         <form method="post" action="?/headersCheck" class="flex flex-col gap-4" use:enhance={handleSubmit}>
           <div class="form-control">
-            <label class="label pb-1">
+            <label class="label pb-1" for="headers-url">
               <span class="label-text font-medium">Domain or URL</span>
             </label>
             <div class="relative">
@@ -90,6 +96,7 @@
                 type="text" 
                 class="input input-bordered w-full pr-12 font-mono text-sm" 
                 name="url" 
+                id="headers-url"
                 bind:value={url} 
                 placeholder="example.com" 
                 required 
@@ -106,9 +113,9 @@
                 </button>
               {/if}
             </div>
-            <label class="label pt-0">
+            <p class="label pt-0">
               <span class="label-text-alt">Protocol (http://) will be added if missing</span>
-            </label>
+            </p>
           </div>
           
           <button 
@@ -151,11 +158,13 @@
         <div class="bg-base-200 p-4 border-b border-base-300 flex justify-between items-center">
           <h3 class="text-lg font-semibold flex items-center gap-2">
             <Globe class="w-5 h-5" />
-            <span class="font-mono text-sm truncate">{form.url}</span>
+            <span class="font-mono text-sm truncate">{form?.url ?? ''}</span>
           </h3>
           
           <div class="flex gap-1">
-            <span class="badge badge-sm">Status: {form.statusCode} {form.statusText}</span>
+            {#if form?.statusCode}
+              <span class="badge badge-sm">Status: {form.statusCode} {form?.statusText ?? ''}</span>
+            {/if}
             {#if securityScore}
               <span class="badge badge-sm badge-{getScoreColor(securityScore.score)}">
                 Security: {securityScore.score}/{securityScore.max}
@@ -243,6 +252,7 @@
               {/if}
               
               <h4 class="text-sm font-semibold mb-2 text-base-content/70 uppercase">Security Headers</h4>
+              {#if categorizedHeaders}
               <div class="space-y-3">
                 {#each Object.entries(categorizedHeaders.security) as [key, value]}
                   <div class="bg-base-200 p-3 rounded-md">
@@ -262,11 +272,13 @@
                   </div>
                 {/each}
               </div>
+              {/if}
             </div>
           {:else if selectedTab === 'cache'}
             <!-- Cache Headers Tab -->
             <div>
               <h4 class="text-sm font-semibold mb-2 text-base-content/70 uppercase">Cache Headers</h4>
+              {#if categorizedHeaders}
               <div class="space-y-3">
                 {#each Object.entries(categorizedHeaders.cache) as [key, value]}
                   <div class="bg-base-200 p-3 rounded-md">
@@ -286,11 +298,13 @@
                   </div>
                 {/each}
               </div>
+              {/if}
             </div>
           {:else if selectedTab === 'server'}
             <!-- Server Headers Tab -->
             <div>
               <h4 class="text-sm font-semibold mb-2 text-base-content/70 uppercase">Server Headers</h4>
+              {#if categorizedHeaders}
               <div class="space-y-3">
                 {#each Object.entries(categorizedHeaders.server) as [key, value]}
                   <div class="bg-base-200 p-3 rounded-md">
@@ -310,9 +324,11 @@
                   </div>
                 {/each}
               </div>
+              {/if}
               
               <div class="mt-6">
                 <h4 class="text-sm font-semibold mb-2 text-base-content/70 uppercase">Content Headers</h4>
+                {#if categorizedHeaders}
                 <div class="space-y-3">
                   {#each Object.entries(categorizedHeaders.content) as [key, value]}
                     {#if value}
@@ -326,6 +342,7 @@
                     {/if}
                   {/each}
                 </div>
+                {/if}
               </div>
             </div>
           {/if}

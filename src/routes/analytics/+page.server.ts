@@ -110,10 +110,12 @@ export const actions = {
         logContent: combinedLogs,
         logFiles: processedFiles
       };
-    } catch (error) {
+    } catch (error: unknown) {
       console.error('SSH connection error:', error);
+      let message = 'Failed to connect';
+      if (error instanceof Error) message = `Failed to connect: ${error.message}`;
       return fail(500, {
-        error: `Failed to connect: ${error.message}`,
+        error: message,
         success: false
       });
     }

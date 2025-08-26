@@ -1,9 +1,8 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { LucideLoader, LucideLock, LucideServer, LucideTerminal, LucideUser, LucideAlertCircle, LucideInfo, LucideCalendar, LucideUser2, LucideGlobe, LucideFile, LucideArchive } from '@lucide/svelte';
+	import { LucideLoader, LucideLock, LucideServer, LucideTerminal, LucideUser, LucideAlertCircle, LucideInfo, LucideCalendar, LucideUser2, LucideGlobe, LucideFile, LucideArchive, LucideKey } from '@lucide/svelte';
 	import type { ActionData } from './$types';
 	
-	export let data;
 	export let form: ActionData;
 	
 	let isLoading = false;
@@ -129,7 +128,9 @@
 	}
 	
 	function selectAllLogFiles() {
-		selectedLogFiles = availableLogFiles.map(file => file.name);
+		selectedLogFiles = availableLogFiles
+			.map((file) => file.name)
+			.filter((n): n is string => Boolean(n));
 	}
 	
 	function deselectAllLogFiles() {
@@ -138,7 +139,7 @@
 </script>
 
 <svelte:head>
-	<title>Error Logs | Route Analytics</title>
+	<title>Error Logs | WebTrace Analytics</title>
 </svelte:head>
 
 <div class="container mx-auto p-4">
@@ -244,7 +245,6 @@
 									placeholder="-----BEGIN RSA PRIVATE KEY-----" 
 									class="textarea textarea-bordered w-full h-24" 
 									style="font-family: monospace;"
-									type={showPrivateKey ? 'text' : 'password'}
 								></textarea>
 							</div>
 						{/if}
@@ -317,8 +317,9 @@
 							<div class="flex flex-wrap gap-2">
 								{#each form.logFiles as file}
 									<button 
-										class="btn btn-sm {selectedLogFiles.includes(file.name) ? 'btn-primary' : 'btn-outline'}"
-										on:click={() => toggleLogFileSelection(file.name)}
+										class="btn btn-sm {selectedLogFiles.includes(file.name ?? '') ? 'btn-primary' : 'btn-outline'}"
+										on:click={() => file.name && toggleLogFileSelection(file.name)}
+										disabled={!file.name}
 									>
 										{#if file.compressed}
 											<LucideArchive class="w-4 h-4 mr-1" />
@@ -355,7 +356,7 @@
 										{#each filteredLogEntries as entry, i}
 											<tr class="hover:bg-base-100 cursor-pointer" 
 												on:click={() => {
-													const el = document.getElementById(`log-details-${i}`);
+													const el = document.getElementById(`log-details-${i}`) as HTMLDetailsElement | null;
 													if (el) el.open = !el.open;
 												}}>
 												
