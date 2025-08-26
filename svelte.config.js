@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-node';
+import adapter from '@sveltejs/adapter-vercel';
 import { vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -8,9 +8,11 @@ const config = {
 	preprocess: vitePreprocess(),
 
 	kit: {
-		// adapter-node: The SvelteKit Node.js adapter
-		// See https://svelte.dev/docs/kit/adapter-node for configuration options
-		adapter: adapter()
+		// adapter-vercel: Deploy SvelteKit to Vercel
+		// See https://svelte.dev/docs/kit/adapter-vercel for configuration options
+		adapter: adapter({
+			runtime: 'nodejs22.x'
+		})
 	}
 };
 
